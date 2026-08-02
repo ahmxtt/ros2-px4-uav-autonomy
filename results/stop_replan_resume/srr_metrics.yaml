@@ -1,0 +1,103 @@
+scope: >-
+  Stop-Replan-Resume reaction to a single obstacle absent from the prior map,
+  during the nominal mission. PX4 SITL, perception mode: detection from the 2D
+  LiDAR only. Ground truth was not used for detection, obstacle construction,
+  replanning or control decisions. It remained available in a separate
+  evaluation-only namespace for diagnostic and post-run metrics, which is what
+  the ground_truth_used_online and perception_mode_no_ground_truth_online keys
+  below record: no online decision used ground truth, not that ground truth was
+  absent from the running process.
+run: single PX4 SITL run, verdict PASS
+verdict: PASS
+detection:
+  mode: lidar_cluster_detection
+  sensor: /scan_filtered (2D LiDAR)
+  ground_truth_used_online: false
+  confirmation_frames: 4
+  sensed_centroid_world_xy_m:
+  - -21.2742
+  - -42.772
+  sensed_radius_m: 1.9534
+  novelty_distance_to_prior_m: 3.7336
+detection_accuracy_evaluation_only:
+  note: >-
+    Ground truth was used for evaluation only. It did not reach the detector,
+    the obstacle builder, the replanner or the controller, and no online
+    decision read it. It did remain available in a separate evaluation-only
+    namespace during execution, where it was read for diagnostic distances and
+    afterwards for the accuracy figures below.
+  gt_centroid_world_xy_m:
+  - -21.33
+  - -43.71
+  gt_radius_m: 1.5
+  centroid_error_m: 0.9396
+  radius_error_m: 0.4534
+  radius_conservative: true
+stop_and_hover:
+  detection_to_stop_command_s: 0.0146
+  stop_to_stable_hover_s: 6.4
+  hover_stability_window_s: 3.1
+  max_position_error_during_transition_m: 0.61
+local_replan:
+  method: clearance-aware A* on a cropped, patched region of interest, then cubic
+    B-spline refinement with clearance validation
+  total_runtime_s: 0.2508
+  astar_runtime_s: 0.1373
+  smoother_runtime_s: 0.0094
+  runtime_budget_s: 3.0
+  astar_nodes_expanded: 16746
+  astar_path_length_m: 23.525
+  smoothed_path_length_m: 23.1781
+  clearance_min_m: 0.8078
+  clearance_min_ge_r_eff: true
+  clearance_min_ge_r_pref: false
+  classification: boundary_smoothed
+  classification_note: 'boundary_smoothed: clearance is above the effective radius
+    r_eff = 0.65 m but below the preferred radius r_pref = 0.90 m. The local detour
+    is collision-free but has less margin than the nominal plan.'
+  max_curvature_1_per_m: 0.7337
+  max_lateral_accel_mps2: 1.0
+  collision_free: true
+resume_and_rejoin:
+  resume_anchor_world_xy_m:
+  - -14.9093
+  - -30.767
+  resume_index_in_segment: 737
+  position_jump_replan_to_resume_m: 0.245
+  yaw_jump_replan_to_resume_deg: 11.0665
+  rejoin_distance_to_original_reference_m: 0.006
+  rejoin_note: The position jump is the handover discontinuity between the local detour
+    and the resume anchor. The rejoin distance is how far the vehicle actually was
+    from the original mission reference at rejoin. They are different quantities.
+  detection_to_rejoin_s: 22.52
+mission_outcome:
+  mission_completed: true
+  tracking_max_error_m: 0.8023
+  tracking_budget_m: 1.0
+  tracking_window_breach: false
+  offboard_dropout: false
+  failsafe_triggered: false
+  land_and_disarm: commanded and observed; no force-disarm
+verdict_conditions:
+  detection_mode_lidar_cluster_detection: true
+  perception_mode_no_ground_truth_online: true
+  perception_sensed_obstacle_built: true
+  scan_topic_received_messages: true
+  detection_confirmed: true
+  stop_hover_command_sent: true
+  hover_stable_ge_3s: true
+  replan_success: true
+  replan_runtime_le_3s: true
+  bspline_validation_pass: true
+  resume_started: true
+  rejoin_original_mission: true
+  mission_completed: true
+  no_failsafe_during_run: true
+  tracking_max_lt_1m: true
+  max_altitude_le_2p5: true
+  land_sent: true
+  disarm_seen: true
+  force_disarm_not_sent: true
+  immutable_artifacts_unchanged: true
+simulation_only: true
+real_hardware_used: false

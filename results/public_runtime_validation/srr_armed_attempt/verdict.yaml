@@ -1,0 +1,33 @@
+verdict: FAIL
+scenario_id: stop_replan_resume_perception
+validation_gate: Gate 6D-B
+validation_gate_note: 'Gate 6D-B: perception-driven. Detection from LiDAR clustering
+  plus a novelty test against the prior map; the replan uses the sensed obstacle on
+  the unpatched prior. Ground truth is retained in a separate evaluation-only
+  namespace: it does not gate detection, obstacle construction, replanning or
+  control decisions, but it may be used to compute diagnostic metrics and
+  post-run evaluation values.'
+oracle_mode: 'off'
+detection_mode: lidar_cluster_detection
+abort_reason: lpos_stale
+conditions:
+  detection_mode_lidar_cluster_detection: true
+  perception_mode_no_ground_truth_online: true
+  perception_sensed_obstacle_built: false
+  scan_topic_received_messages: true
+  detection_confirmed: false
+  stop_hover_command_sent: false
+  hover_stable_ge_3s: false
+  replan_success: false
+  replan_runtime_le_3s: false
+  bspline_validation_pass: false
+  resume_started: false
+  rejoin_original_mission: false
+  mission_completed: false
+  no_failsafe_during_run: false
+  tracking_max_lt_1m: false
+  max_altitude_le_2p5: true
+  land_sent: true
+  disarm_seen: true
+  force_disarm_not_sent: true
+  immutable_artifacts_unchanged: true

@@ -1,0 +1,87 @@
+verdict: FAIL
+timestamp_iso: 2026-08-02T18:40:35+0200
+mode: armed_short_segment
+arm_flag: true
+eyes_flag: true
+armed_path_enabled: true
+topics_visible: true
+first_status_seen: true
+first_lpos_seen: true
+first_lpos_valid: true
+failsafe_flags_subscribed: true
+ekf_ready:
+  reached: true
+  time_s: 21.7002958059893
+hold_setpoint_ned_m:
+  x: 0.025
+  y: -0.025
+  z: -2.0
+handshake:
+  nav_state_after_handshake: 14
+  nav_state_offboard_reached: true
+  arm_attempted: true
+  arm_reached: true
+settle:
+  completed: false
+  time_s: null
+  max_abs_err_m: null
+mission:
+  started: false
+  completed: false
+  started_wall_s: null
+  stopped_wall_s: null
+  messages_sent: 0
+  achieved_rate_hz:
+    p50: 20.00376591109822
+    p95: 20.223909852252014
+    p99: 20.295321010280958
+    target: 20.0
+  tracking:
+    max_err_m: null
+    rolling_1s_max_err_m: null
+    window_breach: false
+    max_tracking_error_m_setting: 1.0
+  nav_state_left_offboard_in_mission: false
+land_disarm:
+  land_sent: true
+  disarm_seen: true
+  force_disarm_sent: false
+nav_states_observed:
+- 2
+- 14
+- 18
+arming_states_observed:
+- 1
+- 2
+aborted: true
+abort_reason: lpos_stale
+refusal_reasons:
+- lpos_stale
+segment:
+  segment_id: -1
+  segment_name: MULTI_SEGMENT
+  n_rows_selected: 5725
+  selected_duration_s: 286.158823
+  selected_duration_stretched_s: 286.158823
+  bounds_ned_m:
+    x_min: 0.025
+    x_max: 99.999946
+    y_min: -0.025
+    y_max: 70.999954
+    z_min: -2.0
+    z_max: -2.0
+safety_caps:
+  speed_scale_hard_cap: 0.7
+  max_altitude_hard_cap_m: 3.5
+  tracking_window_s: 1.0
+multi_segment_enabled: true
+per_segment: []
+diagnostics:
+  optional_topics_status:
+    failsafe_flags: active
+    vehicle_control_mode: active
+    battery_status_v1: active
+    estimator_status_flags: active
+    estimator_status: not_exported_by_this_px4_build
+  first_failsafe_tick: null
+  offboard_drop_tick: null

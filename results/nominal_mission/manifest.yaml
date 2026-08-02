@@ -1,0 +1,10 @@
+release: '0.1'
+content: 'Curated nominal-mission results. Two distinct metrics, kept separate: (a)
+  setpoint tracking, (b) ground-truth vs PX4 estimator consistency.'
+regenerable: false
+why_not_regenerable: Both are live PX4 SITL runs. SITL execution is not deterministic;
+  only the offline planning chain is.
+canonical_sources:
+  tracking: nominal full-mission validation run (private development archive)
+  state_consistency: ground-truth vs estimator audit run (private development archive)
+evidence_scope: single controlled run per metric

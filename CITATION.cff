@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+title: "ros2-px4-uav-autonomy: modular sense-plan-act autonomy for a ROS 2 / PX4 UAV in forest terrain"
+message: "If you use this software or its results, please cite it."
+type: software
+version: "0.1.0"
+license: Apache-2.0
+repository-code: "https://github.com/ahmxtt/ros2-px4-uav-autonomy"
+abstract: >-
+  Deterministic 2D grid planning, clearance-validated cubic B-spline trajectory
+  refinement, PX4 Offboard execution and local region-of-interest replanning
+  with rejoin, for a multirotor UAV in cluttered forest terrain.
+
+  What this release demonstrates, and what it does not. The offline planning
+  chain and the local-replanning geometry are publicly reproducible: the
+  occupancy grid and the A* cell path reproduce exactly, the refined trajectory
+  and its derived metrics within documented numerical tolerances. Curated
+  evidence from controlled PX4 SITL runs with Gazebo Harmonic is included, but
+  those runs were recorded with the private development tree and are single
+  measurements rather than repeated trials. The refactored public runtime has
+  not completed an end-to-end armed mission: it arms, enters Offboard and holds
+  position, then aborts on a telemetry-freshness watchdog before entering the
+  mission phase.
+
+  No custom SLAM or sensor-fusion method; state estimation is PX4 EKF2. No
+  real-flight validation. Not safety-certified.
+keywords:
+  - unmanned aerial vehicle
+  - path planning
+  - A-star
+  - B-spline trajectory
+  - ROS 2
+  - PX4
+  - Gazebo
+  - obstacle avoidance
+  - reproducibility
+authors:
+  - given-names: "Ahmet"
+    family-names: "Ünser"

@@ -1,0 +1,227 @@
+segments:
+- segment_id: 1
+  segment_type: leg
+  name: start_to_poi1
+  astar_path_length_m: 103.54484476406446
+  astar_planning_time_ms: 1420.6514569814317
+  astar_clearance_min_m: 1.2000000000000002
+  astar_planning_classification: robust
+  smoothing_classification: robust_smoothed
+  trajectory_length_m: 101.98880024016316
+  n_samples: 5179
+  clearance_min_m: 1.0404326023342407
+  clearance_mean_m: 2.916402644378018
+  clearance_p10_m: 1.2020815280171309
+  collision_free: true
+  in_bounds_all: true
+  max_lateral_accel_mps2: 1.0000000000000002
+  curvature_max_1_per_m: 0.7264695564798886
+  start_xy_request:
+  - -50.0
+  - -70.0
+  goal_xy_request:
+  - 19.288277732365465
+  - 0.8034926319499309
+  goal_radius_request_m: 0.5
+  endpoint_xy:
+  - 18.775
+  - 0.825
+  start_xy:
+  - -50.025000000000006
+  - -69.975
+  endpoint_yaw_rad: 0.9421415467068689
+  start_yaw_rad: 0.7853981142160383
+  smoother: clearance_preserving
+  selected_attempt: bspline_s0_2.00m
+  selected_method: bspline_s0
+  selected_control_step_m: 2.0
+  attempts:
+  - name: bspline_s0_2.00m
+    classification: robust_smoothed
+    clearance_min_m: 1.0404326023342407
+    max_deviation_from_astar_m: 0.321230440633962
+    curvature_max_1_per_m: 0.7264695564798886
+    n_control_points: 53
+  - name: bspline_s0_1.00m
+    classification: robust_smoothed
+    clearance_min_m: 1.1412712210513327
+    max_deviation_from_astar_m: 0.09685512635837222
+    curvature_max_1_per_m: 1.6218596362521227
+    n_control_points: 105
+  ring_snap_applied: true
+  ring_snap_target_xy:
+  - 19.02408413270917
+  - 0.549522846606413
+  ring_snap_orbit_center_xy:
+  - 15.0
+  - 5.0
+  ring_snap_radial_offset_m: 0.37139004726744357
+- segment_id: 2
+  segment_type: orbit
+  name: orbit_poi1
+  center_xy:
+  - 15.0
+  - 5.0
+  radius_m: 6.0
+  turns_requested: 2
+  turns_actual: 2.339015203302383
+  total_sweep_rad: 14.696465958659207
+  direction_ccw: true
+  orbit_speed_mps: 1.5
+  start_angle_rad: -0.8356702353951762
+  end_angle_rad: 13.860795723264031
+  ring_start_xy:
+  - 19.02408413270917
+  - 0.549522846606413
+  ring_end_xy:
+  - 16.63719825542943
+  - 10.772311657596013
+  incoming_radial_gap_m: 0.0
+  tangent_compatible: true
+  circumference_m: 88.17879575195525
+  length_m: 88.17879575195525
+  n_samples: 1685
+  clearance_min_m: 1.1629703349613008
+  clearance_mean_m: 5.266834324161899
+  in_bounds_all: true
+  collision_free: true
+  max_lateral_accel_mps2: 0.375
+  curvature_const_1_per_m: 0.16666666666666666
+- segment_id: 3
+  segment_type: leg
+  name: poi1_to_poi2
+  astar_path_length_m: 51.412341238461444
+  astar_planning_time_ms: 520.0414349965286
+  astar_clearance_min_m: 1.2000000000000002
+  astar_planning_classification: robust
+  smoothing_classification: robust_smoothed
+  trajectory_length_m: 50.78511061340471
+  n_samples: 2572
+  clearance_min_m: 1.0965856099730655
+  clearance_mean_m: 3.402485846593945
+  clearance_p10_m: 1.2020815280171309
+  collision_free: true
+  in_bounds_all: true
+  max_lateral_accel_mps2: 1.0000000000000002
+  curvature_max_1_per_m: 0.5640021845582441
+  start_xy_request:
+  - 16.63719825542943
+  - 10.772311657596013
+  goal_xy_request:
+  - -27.0048805375295
+  - 29.19896714795645
+  goal_radius_request_m: 0.5
+  endpoint_xy:
+  - -26.575
+  - 28.975
+  start_xy:
+  - 16.624999999999996
+  - 10.774999999999999
+  endpoint_yaw_rad: 2.357582392082167
+  start_yaw_rad: 1.9522193537551171
+  smoother: clearance_preserving
+  selected_attempt: bspline_s0_2.00m
+  selected_method: bspline_s0
+  selected_control_step_m: 2.0
+  attempts:
+  - name: bspline_s0_2.00m
+    classification: robust_smoothed
+    clearance_min_m: 1.0965856099730655
+    max_deviation_from_astar_m: 0.208846588830824
+    curvature_max_1_per_m: 0.5640021845582441
+    n_control_points: 27
+  - name: bspline_s0_1.00m
+    classification: robust_smoothed
+    clearance_min_m: 1.1672617529928753
+    max_deviation_from_astar_m: 0.11828346603405927
+    curvature_max_1_per_m: 1.234091685433757
+    n_control_points: 53
+  ring_snap_applied: true
+  ring_snap_target_xy:
+  - -26.597665798377445
+  - 28.942076687028383
+  ring_snap_orbit_center_xy:
+  - -30.0
+  - 24.0
+  ring_snap_radial_offset_m: 0.03997102642057345
+- segment_id: 4
+  segment_type: orbit
+  name: orbit_poi2
+  center_xy:
+  - -30.0
+  - 24.0
+  radius_m: 6.0
+  turns_requested: 2
+  turns_actual: 2.3225364481602027
+  total_sweep_rad: 14.592926886469247
+  direction_ccw: true
+  orbit_speed_mps: 1.5
+  start_angle_rad: 0.9678694582572441
+  end_angle_rad: 15.56079634472649
+  ring_start_xy:
+  - -26.597665798377445
+  - 28.942076687028383
+  ring_end_xy:
+  - -35.93514287385962
+  - 24.8798176327361
+  incoming_radial_gap_m: 0.0
+  tangent_compatible: true
+  circumference_m: 87.55756131881549
+  length_m: 87.55756131881549
+  n_samples: 1673
+  clearance_min_m: 3.438386249390839
+  clearance_mean_m: 6.4663346118678975
+  in_bounds_all: true
+  collision_free: true
+  max_lateral_accel_mps2: 0.375
+  curvature_const_1_per_m: 0.16666666666666666
+- segment_id: 5
+  segment_type: leg
+  name: poi2_to_start
+  astar_path_length_m: 100.93036072312192
+  astar_planning_time_ms: 941.2761570129078
+  astar_clearance_min_m: 1.2000000000000002
+  astar_planning_classification: robust
+  smoothing_classification: robust_smoothed
+  trajectory_length_m: 100.14109576691102
+  n_samples: 5048
+  clearance_min_m: 1.140175425099138
+  clearance_mean_m: 2.8694062775756035
+  clearance_p10_m: 1.2175795661885922
+  collision_free: true
+  in_bounds_all: true
+  max_lateral_accel_mps2: 1.0000000000000002
+  curvature_max_1_per_m: 0.6780909382701595
+  start_xy_request:
+  - -35.93514287385962
+  - 24.8798176327361
+  goal_xy_request:
+  - -50.0
+  - -70.0
+  goal_radius_request_m: 0.01
+  endpoint_xy:
+  - -50.025
+  - -69.925
+  start_xy:
+  - -35.925
+  - 24.875
+  endpoint_yaw_rad: -2.368963735626701
+  start_yaw_rad: -2.4574701941211483
+  smoother: clearance_preserving
+  selected_attempt: bspline_s0_2.00m
+  selected_method: bspline_s0
+  selected_control_step_m: 2.0
+  attempts:
+  - name: bspline_s0_2.00m
+    classification: robust_smoothed
+    clearance_min_m: 1.140175425099138
+    max_deviation_from_astar_m: 0.20068038263289548
+    curvature_max_1_per_m: 0.6780909382701595
+    n_control_points: 52
+  - name: bspline_s0_1.00m
+    classification: robust_smoothed
+    clearance_min_m: 1.1543396380615196
+    max_deviation_from_astar_m: 0.11424564852469372
+    curvature_max_1_per_m: 1.3565820474530896
+    n_control_points: 102
+failure_reason: null

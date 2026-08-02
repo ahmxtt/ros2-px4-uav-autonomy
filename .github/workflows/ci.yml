@@ -1,0 +1,84 @@
+name: ci
+
+# Offline core only. PX4, ROS 2 and Gazebo are deliberately not installed in
+# CI for Release 0.1: the algorithmic package has no ROS dependency, and a
+# green badge on a genuinely offline suite is worth more than a disabled
+# simulator job. The ROS runtime under ros2/nodes/ is verified separately in
+# a local SITL environment; see docs/reproducibility.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install the package and test extra
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+
+      - name: Byte-compile every source tree
+        run: python -m compileall -q src tools tests
+
+      - name: Byte-compile the ROS nodes (syntax only, ROS not installed)
+        run: python -m compileall -q ros2/nodes
+
+      - name: Run the test suite
+        run: pytest -q
+
+      - name: Offline reproduction from a foreign working directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/wd" "$RUNNER_TEMP/demo"
+          cd "$RUNNER_TEMP/wd"
+          python "$GITHUB_WORKSPACE/tools/reproduce_offline_demo.py" \
+            --output-dir "$RUNNER_TEMP/demo"
+
+      - name: Offline Stop-Replan-Resume geometry reproduction
+        run: |
+          mkdir -p "$RUNNER_TEMP/wd2" "$RUNNER_TEMP/srr"
+          cd "$RUNNER_TEMP/wd2"
+          python "$GITHUB_WORKSPACE/tools/reproduce_srr_geometry.py" \
+            --output-dir "$RUNNER_TEMP/srr"
+
+      - name: Regenerate the PX4 setpoint stream from the mission reference
+        run: |
+          mkdir -p "$RUNNER_TEMP/wd3"
+          cd "$RUNNER_TEMP/wd3"
+          python "$GITHUB_WORKSPACE/tools/build_ned_setpoints.py" \
+            --trajectory-csv "$GITHUB_WORKSPACE/results/mission_reference/mission_reference.csv" \
+            --output-csv "$RUNNER_TEMP/setpoints_ned.csv" \
+            --require-segments start_to_poi1,orbit_poi1,poi1_to_poi2,orbit_poi2,poi2_to_start
+          # The stream the canonical armed run consumed, byte for byte.
+          echo "bcc70fb896454d5e0a98fd46812bbd4513670891bac2708298871ec611e5d81e  $RUNNER_TEMP/setpoints_ned.csv" \
+            | sha256sum -c -
+
+      - name: Assemble the Stop-Replan-Resume runtime inputs
+        run: |
+          mkdir -p "$RUNNER_TEMP/wd4"
+          cd "$RUNNER_TEMP/wd4"
+          python "$GITHUB_WORKSPACE/tools/build_srr_inputs.py" \
+            --output-dir "$RUNNER_TEMP/srr_inputs"
+
+      - name: Verify the published result hashes
+        run: |
+          for d in results/*/; do
+            ( cd "$d" && sha256sum -c hashes.txt )
+          done
+
+      - name: Shell scripts parse
+        run: |
+          for s in $(find . -name '*.sh'); do bash -n "$s"; done

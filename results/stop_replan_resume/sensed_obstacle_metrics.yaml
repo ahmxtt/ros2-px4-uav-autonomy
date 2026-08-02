@@ -1,0 +1,25 @@
+oracle_mode: 'off'
+perception_sensed_obstacle:
+  centroid_world_xy:
+  - -21.274218618703628
+  - -42.772038765924506
+  radius_m: 1.953387339358762
+  arc_centroid_world_xy:
+  - -22.308798418020242
+  - -44.0617419615466
+  arc_half_span_m: 1.653387339358762
+  bearing_from_vehicle_rad: 0.8947248447500561
+  prior_dist_to_occupied_m: 3.7336309405188945
+  first_seen_wall_s: 60.31804961800003
+  n_frames: 4
+  source: perception
+ground_truth_eval_only:
+  centroid_world_xy:
+  - -21.33
+  - -43.71
+  radius_m: 1.5
+errors_eval_only:
+  backprojected_centroid_error_m: 0.9396184540161798
+  arc_centroid_error_m: 1.0400811269471157
+  radius_error_m: 0.45338733935876196
+  radius_conservative: true

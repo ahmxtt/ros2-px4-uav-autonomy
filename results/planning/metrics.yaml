@@ -1,0 +1,21 @@
+scope: Nominal global planning, single leg (start -> orbit-1 entry).
+map: execution prior at z_ref = 2.0 m, 0.05 m/cell, 2913 x 3911 cells
+planner: A*, 8-connected, octile heuristic, no corner cutting, hard inflation at r_plan_min
+  = 1.10 m + comfort cost in [1.10, 1.20)
+candidate: robust
+path_length_m: 102.13920984545422
+straight_line_distance_m: 97.5406039873371
+alpha_actual: 1.0471455544679027
+n_path_points: 1543
+nodes_expanded: 230047
+clearance_min_m: 1.2000000000000002
+clearance_mean_m: 2.8202428872965135
+clearance_reference: distance to raw (un-inflated) obstacles, in metres
+classification: robust
+policy_radii_m:
+  r_eff: 0.65
+  r_pref: 0.9
+  r_plan_min: 1.1
+  r_comfort: 1.2
+determinism: regenerated from sim/worlds/forest_map2.sdf; path is cell-for-cell identical
+  and the map PGM is byte-identical

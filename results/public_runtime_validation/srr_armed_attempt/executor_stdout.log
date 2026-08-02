@@ -1,0 +1,27 @@
+[INFO] [1785688835.922829456] [offboard_mission_executor]: offboard_mission_executor: arm_flag=True eyes_flag=True armed_path=True speed_scale=1.000 (cap 0.70) takeoff_alt_m=2.00 max_alt_m=2.50 (cap 3.50) max_track_err_m=1.00 lpos_watchdog_s=0.50 xy_bounds_rel_m=5.00 rate_hz=20.0 max_run_s=600.0 segment_id=-1 segment_name=MULTI_SEGMENT segment_frac=1.000 selected_rows=5725 stretched_dur_s=286.16
+[INFO] [1785688835.923370362] [offboard_mission_executor]: RMW active=rmw_fastrtps_cpp (env RMW_IMPLEMENTATION=rmw_fastrtps_cpp)
+[WARN] [1785688835.923781096] [offboard_mission_executor]: ARM-GATE: BOTH flags set. Run WILL attempt OFFBOARD + ARM + execute the selected short segment. SIGINT triggers Land + (after timeout) force-disarm.
+[INFO] [1785688837.152373010] [offboard_mission_executor]: [event] node_initialized: oracle_mode=off online_obstacle_xy=None online_obstacle_r=None gt_obstacle_xy=(-21.33, -43.71) gt_obstacle_r=1.5 (GT is metrics-only unless oracle-mode uses it)
+[INFO] [1785688837.184848044] [offboard_mission_executor]: [srr] subscribed to /scan_filtered (best-effort QoS)
+[INFO] [1785688837.186059867] [offboard_mission_executor]: First VehicleStatus: nav_state=2 arming_state=1 failsafe=False
+[INFO] [1785688837.186675532] [offboard_mission_executor]: First valid VehicleLocalPosition: x=0.02 y=-0.03 z=-0.01
+[INFO] [1785688837.207756576] [offboard_mission_executor]: [event] scan_topic_first_msg: topic=/scan_filtered
+[INFO] [1785688837.269375939] [offboard_mission_executor]: state WAIT_STATUS -> WAIT_LPOS
+[INFO] [1785688837.369806038] [offboard_mission_executor]: state WAIT_LPOS -> WAIT_EKF_READY
+[INFO] [1785688857.569348513] [offboard_mission_executor]: EKF stable. Hold setpoint: x=0.025 y=-0.025 z=-2.000
+[INFO] [1785688857.569733394] [offboard_mission_executor]: state WAIT_EKF_READY -> PRE_STREAM
+[INFO] [1785688859.669493252] [offboard_mission_executor]: state PRE_STREAM -> DECIDE_ARM
+[WARN] [1785688859.769341011] [offboard_mission_executor]: Sending VEHICLE_CMD_DO_SET_MODE param1=1.0 param2=6.0 (OFFBOARD).
+[INFO] [1785688859.769838834] [offboard_mission_executor]: state DECIDE_ARM -> WAIT_OFFBOARD
+[INFO] [1785688860.169985324] [offboard_mission_executor]: OFFBOARD reached: nav_state=14
+[WARN] [1785688860.170315612] [offboard_mission_executor]: Sending VEHICLE_CMD_COMPONENT_ARM_DISARM.
+[INFO] [1785688860.170650009] [offboard_mission_executor]: state WAIT_OFFBOARD -> WAIT_ARMED
+[WARN] [1785688860.270104118] [offboard_mission_executor]: ARMED. Climbing to PX4-NED (0.03, -0.03, -2.00).
+[INFO] [1785688860.270429077] [offboard_mission_executor]: state WAIT_ARMED -> SETTLE_HOLD
+[INFO] [1785688860.270691499] [offboard_mission_executor]: [event] settle_altitude_cap_relaxed: cap=2.80m (takeoff+0.80)
+[ERROR] [1785688870.869372568] [offboard_mission_executor]: abort requested: lpos_stale
+[WARN] [1785688870.970125435] [offboard_mission_executor]: Sending VEHICLE_CMD_NAV_LAND.
+[INFO] [1785688870.970645810] [offboard_mission_executor]: state SETTLE_HOLD -> ABORT_LANDING
+[INFO] [1785688875.369468293] [offboard_mission_executor]: Disarm confirmed after abort-Land.
+[INFO] [1785688875.369828197] [offboard_mission_executor]: state ABORT_LANDING -> DONE
+[INFO] [1785688875.942026987] [offboard_mission_executor]: VERDICT=FAIL spin_exc=none

@@ -1,0 +1,194 @@
+artifact: mission_reference
+purpose: >-
+  Complete multi-POI nominal mission reference for the forest_map2 scenario.
+  This is the world-frame geometric and kinematic reference that the PX4
+  Offboard executor and the Stop-Replan-Resume (SRR) node follow: it defines
+  where the vehicle should be, which way it should point, and how fast it
+  should travel, for the entire mission from the takeoff point back to the
+  takeoff point.
+status: >-
+  Curated public copy of the canonical mission reference produced by the
+  research pipeline. Byte-identical to the canonical artifact; the manifest
+  below was rewritten for publication and carries no host, user or absolute
+  path information.
+data_class: >-
+  Derived mission product, not raw data. Every column is computed - A* over an
+  occupancy grid, B-spline refinement, analytic orbit geometry and a
+  curvature-bounded speed profile. Nothing here was measured from a sensor.
+
+source_scenario:
+  world: sim/worlds/forest_map2.sdf
+  scenario: sim/scenarios/forest_map2.yaml
+  planning_config: sim/config/robot_map2_safe.yaml
+  planning_map: >-
+    Execution prior occupancy grid of the forest_map2 world at the 2.0 m
+    reference altitude, 0.05 m per cell. Rebuild the equivalent map with
+    tools/build_prior_map.py.
+
+coordinate_frame:
+  name: Gazebo world ENU, planar
+  x_m: East, metres
+  y_m: North, metres
+  yaw_rad: >-
+    Heading in the world ENU frame, measured counter-clockwise from +x (East),
+    wrapped to (-pi, pi].
+  altitude: >-
+    Not a column. The mission is planned in 2D at a constant reference
+    altitude of 2.0 m above the takeoff point; the altitude enters when
+    tools/build_ned_setpoints.py emits z_ned_m = -2.0.
+  origin_note: >-
+    The vehicle spawn / takeoff point is world (-50.0, -70.0). The PX4 local
+    NED origin is anchored there by the documented transform
+    (x_ned = y_world + 70.0, y_ned = x_world + 50.0).
+
+columns:
+  segment_id: Integer 1..5, mission-ordered.
+  segment_type: leg or orbit.
+  segment_name: start_to_poi1, orbit_poi1, poi1_to_poi2, orbit_poi2, poi2_to_start.
+  s_m: Cumulative arc length from the mission start, metres. Monotonically increasing across all segments.
+  x_m: World ENU East, metres.
+  y_m: World ENU North, metres.
+  yaw_rad: World ENU heading, radians.
+  curvature_1_per_m: Signed path curvature, 1/m.
+  v_ref_mps: Reference speed from the curvature-bounded profile, m/s.
+  t_ref_s: Cumulative reference time from the mission start, seconds.
+
+samples:
+  total: 16157
+  per_segment:
+    1_start_to_poi1: 5179
+    2_orbit_poi1: 1685
+    3_poi1_to_poi2: 2572
+    4_orbit_poi2: 1673
+    5_poi2_to_start: 5048
+
+segments:
+  - segment_id: 1
+    segment_type: leg
+    segment_name: start_to_poi1
+    from_xy_m: [-50.025, -69.975]
+    to_xy_m: [18.775, 0.825]
+    length_m: 101.98880024016316
+    min_clearance_m: 1.0404326023342407
+    smoothing_classification: robust_smoothed
+    note: >-
+      The Stop-Replan-Resume event happens on this segment. The unknown
+      obstacle sits at world (-21.33, -43.71), about 39.4 m along it.
+  - segment_id: 2
+    segment_type: orbit
+    segment_name: orbit_poi1
+    center_xy_m: [15.0, 5.0]
+    radius_m: 6.0
+    turns: 2
+    direction: ccw
+    length_m: 88.17879575195525
+    min_clearance_m: 1.1629703349613008
+  - segment_id: 3
+    segment_type: leg
+    segment_name: poi1_to_poi2
+    from_xy_m: [16.625, 10.775]
+    to_xy_m: [-26.575, 28.975]
+    length_m: 50.78511061340471
+    min_clearance_m: 1.0965856099730655
+    smoothing_classification: robust_smoothed
+  - segment_id: 4
+    segment_type: orbit
+    segment_name: orbit_poi2
+    center_xy_m: [-30.0, 24.0]
+    radius_m: 6.0
+    turns: 2
+    direction: ccw
+    length_m: 87.55756131881549
+    min_clearance_m: 3.438386249390839
+  - segment_id: 5
+    segment_type: leg
+    segment_name: poi2_to_start
+    from_xy_m: [-35.925, 24.875]
+    to_xy_m: [-50.025, -69.925]
+    length_m: 100.14109576691102
+    min_clearance_m: 1.140175425099138
+    smoothing_classification: robust_smoothed
+
+mission_totals:
+  total_length_m: 428.6513636912496
+  reference_duration_s: 286.158823495071
+  min_clearance_m: 1.0404326023342407
+  mean_clearance_m: 3.5918053737539655
+  clearance_p10_m: 1.216552506059644
+  max_curvature_1_per_m: 0.7264695564798886
+  max_lateral_accel_mps2: 1.0000000000000002
+  max_position_jump_at_segment_boundary_m: 0.012490981562820901
+  max_heading_jump_at_segment_boundary_deg: 52.311165982085114
+  v_min_mps: 1.1732519650948312
+  v_max_mps: 1.5
+  v_mean_mps: 1.4974766955286116
+
+configuration_identifiers:
+  planning:
+    r_eff_m: 0.65
+    r_pref_m: 0.9
+    grid_resolution_m: 0.05
+    reference_altitude_m: 2.0
+  orbits:
+    radius_m: 6.0
+    turns: 2
+    direction: ccw
+    speed_mps: 1.5
+  speed_profile:
+    v_nominal_mps: 1.5
+    v_min_mps: 0.3
+    a_lat_max_mps2: 1.0
+    a_long_max_mps2: 1.0
+  smoother: clearance_preserving
+  points_of_interest:
+    poi1_xy_m: [15.0, 5.0]
+    poi2_xy_m: [-30.0, 24.0]
+  start_xy_m: [-50.0, -70.0]
+
+creation_method: >-
+  Three travel legs planned with a deterministic 8-connected grid A* over the
+  execution prior at r_eff = 0.65 m, refined with a clearance-preserving cubic
+  B-spline, and interleaved with two analytic circular orbits. A
+  curvature-bounded forward/backward speed profile was then applied across the
+  whole mission and the segments were stitched with the transition continuity
+  checks recorded in transition_metrics.yaml. Produced offline; no simulator or
+  vehicle was involved.
+
+reproducibility: >-
+  This file is published as data, not regenerated by this repository. The
+  public offline chain (tools/reproduce_offline_demo.py) reproduces a
+  single-leg planning result exactly; it does not rebuild the multi-POI
+  mission, because the multi-leg policy planner, the orbit generator and the
+  mission stitcher were not part of the public extraction. Treat
+  mission_reference.csv as a fixed input.
+
+consumers:
+  - tools/build_ned_setpoints.py
+  - ros2/nodes/offboard_mission_executor.py
+  - ros2/nodes/stop_replan_resume_node.py
+  - tools/reproduce_srr_geometry.py (via results/stop_replan_resume/mission_segment_window.csv)
+
+relation_to_other_public_files:
+  results/stop_replan_resume/mission_segment_window.csv: >-
+    An exact row-for-row slice of this file: segment 1, samples 765..3655
+    (0-based 764..3654), arc length 15.019014 m to 71.995748 m. Verified by
+    tests/test_mission_reference.py.
+  results/planning/path.csv: >-
+    A DIFFERENT artifact. It is a standalone single-leg planning result used
+    for the offline reproduction demo and is not the A* path behind segment 1
+    of this mission - the mission legs were planned with the multi-leg policy
+    planner, which is not part of this release. Do not compare the two.
+
+files:
+  mission_reference.csv:
+    sha256: 5870ffd2f0e89b92a7794d858e7757fdf88f4001980b0375b7219a2f8ab4864e
+    bytes: 1538948
+  mission_metrics.yaml:
+    sha256: 74c8bd429fa5ba400e2bcd571e43a61a83391c85e5328c4d191cc4e828de1e82
+  segment_metrics.yaml:
+    sha256: d264eadda17d9166783dc8e24b2f980e77a79e12604858afa59377833934b319
+  transition_metrics.yaml:
+    sha256: 1869c4542cc8f8f1090e0ca3fdab2a6740bea62a170829c20a9f702891f2f15f
+
+licence: >-
+  CC BY 4.0, see LICENSE-DATA.

@@ -1,0 +1,11 @@
+wall_s,event,info
+1.538075,node_initialized,"oracle_mode=off online_obstacle_xy=None online_obstacle_r=None gt_obstacle_xy=(-21.33, -43.71) gt_obstacle_r=1.5 (GT is metrics-only unless oracle-mode uses it)"
+4.269200,scan_topic_first_msg,topic=/scan_filtered
+24.301867,settle_altitude_cap_relaxed,cap=2.80m (takeoff+0.80)
+33.102725,settle_altitude_cap_restored,strict_cap=2.50m
+60.586439,detection_confirmed,"mode=off arc_centroid=(-22.309,-44.062) sensed_center=(-21.274,-42.772) sensed_r=1.953m streak=4 novelty_dist=3.734m gt_dist=1.040m(metrics-only)"
+60.601071,stop_command_sent,"hover_ned=(20.80111312866211, 23.577293395996094, -2.003021240234375)"
+67.001082,hover_stable_achieved,stable_for=3.10s err=0.094 speed=0.061
+67.100744,replan_started,
+67.427643,replan_completed,runtime=0.251s len=23.18m clr=0.808m cls=boundary_smoothed sps=1200
+83.103868,rejoin_original_mission,resume_idx=737 d_to_resume=0.006m yaw_jump_deg=11.07 obstacle_handled=true

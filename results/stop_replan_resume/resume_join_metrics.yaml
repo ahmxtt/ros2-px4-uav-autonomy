@@ -1,0 +1,11 @@
+resume_idx_in_segment: 737
+resume_xy_world:
+- -14.909329
+- -30.767019
+resume_yaw_world_rad: -0.019713559205103426
+replan_end_xy_world:
+- -14.862743866058796
+- -31.007507462374402
+pos_jump_replan_to_resume_m: 0.24495892561718088
+yaw_jump_replan_to_resume_deg: 11.06648914284237
+rejoined_wall_s: 83.10193301100003

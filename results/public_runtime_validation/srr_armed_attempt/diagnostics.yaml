@@ -1,0 +1,17 @@
+state_when_finalize: DONE
+oracle_mode: 'off'
+online_obstacle_was_ground_truth: false
+scan_topic_used: /scan_filtered
+scan_msg_count: 1147
+detection_confirmed: false
+detection_confirmed_wall_s: .nan
+sensed_obstacle_present: false
+false_positive_count_outside_active_segment: 0
+resume_idx_in_original: -1
+rejoin_wall_s: .nan
+events_count: 3
+tick_count: 383
+immutable_artifacts_status:
+  results/planning: PASS
+  results/nominal_mission: PASS
+  results/stop_replan_resume: PASS

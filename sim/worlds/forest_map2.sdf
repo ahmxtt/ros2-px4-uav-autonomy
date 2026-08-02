@@ -1,0 +1,392 @@
+<?xml version="1.0" ?>
+<sdf version="1.11">
+  <world name="forest_map2">
+
+    <!--
+      Forest robustness/generalisation scenario.
+        Ground plane:        400 x 400 m box
+        Active mission zone: x in [-55, +25], y in [-80, +20]  (80 x 100 m)
+        Trees:               80 deterministically placed (40 Pine + 40 Oak),
+                             using the mesh collision of the original models
+        Forest track:        segmented polyline of 6 visual boxes,
+                             NO collision; support points W0..W6 below
+
+      External assets: this world references the Gazebo Fuel models
+      'Pine Tree' and 'Oak tree' via model:// URIs. Their meshes are NOT
+      vendored in this repository and must be resolvable through
+      GZ_SIM_RESOURCE_PATH or the local Fuel cache. See NOTICE.md.
+      No Fuel http(s) URLs and no heightmap are used.
+
+      Reproducibility: every pose and yaw value is written literally in this
+      file. There is no runtime randomisation, so the derived occupancy grid
+      is byte-identical on every rebuild.
+    -->
+
+    <!--
+      World physics and environment. These four elements are what PX4's own
+      reference world (Tools/simulation/gz/worlds/default.sdf) declares, and
+      PX4 SITL does not work correctly without them:
+
+        <physics>        250 Hz / 4 ms steps. Gazebo's default is 1 ms, which
+                         runs the physics and the 1 kHz clock four times
+                         faster than PX4 expects and starves the simulator on
+                         a modest machine. The engine stays DART, Gazebo
+                         Harmonic's default. PX4's reference world asks for
+                         ODE, but ODE aborts on this world - a 400 m ground
+                         box with 80 mesh trees overflows its collision-space
+                         integer bounds:
+                           ODE INTERNAL ERROR 1: assertion "aabbBound >=
+                           dMinIntExact && aabbBound < dMaxIntExact" failed
+                           in collide() [collision_space.cpp:460]
+                         Gazebo dies mid-flight, PX4 loses its accelerometer
+                         stream, and the vehicle departs at 6 m/s.
+        <gravity>        the value PX4's airframe parameters are tuned for.
+        <magnetic_field> without it the magnetometer has no field to read and
+                         PX4 reports "No valid data from Compass 0". The vector
+                         must match the site declared in <spherical_coordinates>
+                         below, because PX4's EKF looks its expected field up
+                         from the GPS position. Copying PX4's default-world
+                         vector here gave a 114 deg heading error and the
+                         vehicle drifted away from its hold point on takeoff.
+                         Derived from PX4's own world magnetic model
+                         (its world_magnetic_model library) at 51.239583 N,
+                         7.162194 E: declination 3.119 deg, inclination
+                         66.578 deg, total intensity 49.304 uT.
+        <atmosphere>     without it the barometer has nothing to sample and
+                         PX4 reports "No valid data from Baro 0". With no
+                         barometer the EKF height estimate random-walks by
+                         several metres while the vehicle sits on the ground,
+                         and an armed run cannot settle.
+
+      None of this touches the tree poses, so the occupancy grid derived from
+      this file is unaffected. tests/test_world_and_obstacle.py asserts both: that
+      the elements are present, and that the rasterised grid is unchanged.
+    -->
+    <physics name="default_physics" type="dart">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>1.0664e-06 1.9570e-05 -4.5242e-05</magnetic_field>
+    <atmosphere type="adiabatic"/>
+
+    <spherical_coordinates>
+      <latitude_deg>51.239583</latitude_deg>
+      <longitude_deg>7.162194</longitude_deg>
+      <elevation>270</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+
+    <light name='sun' type='directional'>
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <scene>
+      <sky>
+        <clouds>
+          <speed>12</speed>
+        </clouds>
+      </sky>
+    </scene>
+
+    <!--
+      Box ground plane 400 x 400 m, dark forest green (0.18 0.40 0.15).
+      A box rather than <plane> is a deliberate fallback: a <plane> ground
+      was observed to misbehave under Gazebo Harmonic. Upgrading to <plane>
+      is optional and would not change the derived occupancy grid, which is
+      built from the tree poses only.
+    -->
+    <model name="green_ground">
+      <static>true</static>
+      <pose>0 0 -0.05 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>400 400 0.1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>400 400 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.18 0.40 0.15 1</ambient>
+            <diffuse>0.18 0.40 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!--
+      Forest track = segmented polyline of 6 flat visual boxes without
+      collision. Support points:
+        W0 (-48.0, -70.0)  planner_start
+        W1 (-40.0, -55.0)
+        W2 (-25.0, -50.0)
+        W3 (-15.0, -35.0)  narrow passage / S-inflection
+        W4 ( -5.0, -15.0)
+        W5 (  5.0,  -5.0)
+        W6 ( 15.0,   5.0)  incident
+      Track length ~101 m, corridor width 1.2 m per segment.
+      Material 0.55 0.42 0.20 (forest-track brown). Pose z = 0.025 puts them
+      just above the ground surface (ground top at z=0.0).
+    -->
+    <model name="forstweg_segment_0">
+      <static>true</static>
+      <pose>-44.0 -62.5 0.025 0 0 1.0808</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>17.0 1.2 0.05</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.55 0.42 0.20 1</ambient>
+            <diffuse>0.55 0.42 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="forstweg_segment_1">
+      <static>true</static>
+      <pose>-32.5 -52.5 0.025 0 0 0.3217</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>15.8114 1.2 0.05</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.55 0.42 0.20 1</ambient>
+            <diffuse>0.55 0.42 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="forstweg_segment_2">
+      <static>true</static>
+      <pose>-20.0 -42.5 0.025 0 0 0.9828</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>18.0278 1.2 0.05</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.55 0.42 0.20 1</ambient>
+            <diffuse>0.55 0.42 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="forstweg_segment_3">
+      <static>true</static>
+      <pose>-10.0 -25.0 0.025 0 0 1.1071</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>22.3607 1.2 0.05</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.55 0.42 0.20 1</ambient>
+            <diffuse>0.55 0.42 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="forstweg_segment_4">
+      <static>true</static>
+      <pose>0.0 -10.0 0.025 0 0 0.7854</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>14.1421 1.2 0.05</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.55 0.42 0.20 1</ambient>
+            <diffuse>0.55 0.42 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="forstweg_segment_5">
+      <static>true</static>
+      <pose>10.0 0.0 0.025 0 0 0.7854</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>14.1421 1.2 0.05</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.55 0.42 0.20 1</ambient>
+            <diffuse>0.55 0.42 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!--
+      Trees: 80 deterministically placed models (40 Pine + 40 Oak).
+      Resources: model://Pine Tree and model://Oak tree, resolved from the
+      local Gazebo model path or Fuel cache. The collision meshes of the
+      original models are used unchanged; see NOTICE.md.
+      Yaw_i = (0.31 * i) mod 2*pi, rounded to two decimals.
+      Convention: odd indices are Pine, even indices are Oak.
+      Layout order: 58 grid trees (rows y=+15 down to y=-75 on a 10 m
+      raster, with thinning / track / takeoff / goal skips as commented
+      below) -> 2 narrow-passage trees (indices 59, 60, the design stress
+      point) -> 20 outer-ring trees (indices 61..80, 5 each in the East /
+      North / West / South strips).
+      Layout exclusions: r=5 m around the (-50,-70) takeoff point;
+      r=8 m around the (+15,+5) goal and orbit ring; at least 4 m from the
+      forest-track polyline, except the narrow-passage pair, which is placed
+      deliberately at ~1.1 m perpendicular to the polyline.
+    -->
+
+    <!-- Active zone, row y=+15 (thinning skips at -50, -30, +20). -->
+    <include><uri>model://Pine Tree</uri><name>pine_tree_1</name><pose>-40 15 0 0 0 0.31</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_2</name><pose>-20 15 0 0 0 0.62</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_3</name><pose>-10 15 0 0 0 0.93</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_4</name><pose>0 15 0 0 0 1.24</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_5</name><pose>10 15 0 0 0 1.55</pose></include>
+
+    <!-- Active zone, row y=+5 (goal-clearance skips at +10, +20). -->
+    <include><uri>model://Oak tree</uri><name>oak_tree_6</name><pose>-50 5 0 0 0 1.86</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_7</name><pose>-40 5 0 0 0 2.17</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_8</name><pose>-30 5 0 0 0 2.48</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_9</name><pose>-20 5 0 0 0 2.79</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_10</name><pose>-10 5 0 0 0 3.10</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_11</name><pose>0 5 0 0 0 3.41</pose></include>
+
+    <!-- Active zone, row y=-5 (forest-track skip at 0). -->
+    <include><uri>model://Oak tree</uri><name>oak_tree_12</name><pose>-50 -5 0 0 0 3.72</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_13</name><pose>-40 -5 0 0 0 4.03</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_14</name><pose>-30 -5 0 0 0 4.34</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_15</name><pose>-20 -5 0 0 0 4.65</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_16</name><pose>-10 -5 0 0 0 4.96</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_17</name><pose>10 -5 0 0 0 5.27</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_18</name><pose>20 -5 0 0 0 5.58</pose></include>
+
+    <!-- Active zone, row y=-15 (forest-track skip at 0). -->
+    <include><uri>model://Pine Tree</uri><name>pine_tree_19</name><pose>-50 -15 0 0 0 5.89</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_20</name><pose>-40 -15 0 0 0 6.20</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_21</name><pose>-30 -15 0 0 0 0.23</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_22</name><pose>-20 -15 0 0 0 0.54</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_23</name><pose>-10 -15 0 0 0 0.85</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_24</name><pose>10 -15 0 0 0 1.16</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_25</name><pose>20 -15 0 0 0 1.47</pose></include>
+
+    <!-- Active zone, row y=-25 (forest-track skip at -10; thinning skips at -50, -30, +20). -->
+    <include><uri>model://Oak tree</uri><name>oak_tree_26</name><pose>-40 -25 0 0 0 1.78</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_27</name><pose>-20 -25 0 0 0 2.09</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_28</name><pose>0 -25 0 0 0 2.40</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_29</name><pose>10 -25 0 0 0 2.71</pose></include>
+
+    <!-- Active zone, row y=-35 (narrow-passage replacement at -20, -10 -> indices 59, 60 below). -->
+    <include><uri>model://Oak tree</uri><name>oak_tree_30</name><pose>-50 -35 0 0 0 3.02</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_31</name><pose>-40 -35 0 0 0 3.33</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_32</name><pose>-30 -35 0 0 0 3.64</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_33</name><pose>0 -35 0 0 0 3.95</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_34</name><pose>10 -35 0 0 0 4.26</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_35</name><pose>20 -35 0 0 0 4.57</pose></include>
+
+    <!-- Active zone, row y=-45 (forest-track skip at -20). -->
+    <include><uri>model://Oak tree</uri><name>oak_tree_36</name><pose>-50 -45 0 0 0 4.88</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_37</name><pose>-40 -45 0 0 0 5.19</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_38</name><pose>-30 -45 0 0 0 5.50</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_39</name><pose>-10 -45 0 0 0 5.81</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_40</name><pose>0 -45 0 0 0 6.12</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_41</name><pose>10 -45 0 0 0 0.14</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_42</name><pose>20 -45 0 0 0 0.45</pose></include>
+
+    <!-- Active zone, row y=-55 (forest-track skips at -40, -30; the -50 thinning skip is waived, the tree is kept as an anchor). -->
+    <include><uri>model://Pine Tree</uri><name>pine_tree_43</name><pose>-50 -55 0 0 0 0.76</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_44</name><pose>-20 -55 0 0 0 1.07</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_45</name><pose>-10 -55 0 0 0 1.38</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_46</name><pose>0 -55 0 0 0 1.69</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_47</name><pose>10 -55 0 0 0 2.00</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_48</name><pose>20 -55 0 0 0 2.31</pose></include>
+
+    <!-- Active zone, row y=-65 (takeoff-clearance skip at -50; thinning skips at +10, +20). -->
+    <include><uri>model://Pine Tree</uri><name>pine_tree_49</name><pose>-40 -65 0 0 0 2.62</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_50</name><pose>-30 -65 0 0 0 2.93</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_51</name><pose>-20 -65 0 0 0 3.24</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_52</name><pose>-10 -65 0 0 0 3.55</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_53</name><pose>0 -65 0 0 0 3.86</pose></include>
+
+    <!-- Active zone, row y=-75 (takeoff-clearance skip at -50; thinning skips at -40, +10). -->
+    <include><uri>model://Oak tree</uri><name>oak_tree_54</name><pose>-30 -75 0 0 0 4.17</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_55</name><pose>-20 -75 0 0 0 4.48</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_56</name><pose>-10 -75 0 0 0 4.79</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_57</name><pose>0 -75 0 0 0 5.10</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_58</name><pose>20 -75 0 0 0 5.41</pose></include>
+
+    <!--
+      Narrow passage: the design stress point around W3 = (-15, -35).
+      Tree-centre spacing is ~2.2 m, which leaves a 1.2 m free corridor after
+      inflation by robot_radius = 0.5 m. If the readiness check or A* report a
+      problem here, it is a documented property of the scenario rather than a
+      defect; it could be mitigated by repositioning the pair.
+    -->
+    <include><uri>model://Pine Tree</uri><name>pine_tree_59</name><pose>-15.7 -34.1 0 0 0 5.72</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_60</name><pose>-14.3 -35.9 0 0 0 6.03</pose></include>
+
+    <!-- Outer ring East (x in [+25, +75]) - 5 trees. -->
+    <include><uri>model://Pine Tree</uri><name>pine_tree_61</name><pose>30 -80 0 0 0 0.06</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_62</name><pose>55 -40 0 0 0 0.37</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_63</name><pose>40 0 0 0 0 0.68</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_64</name><pose>60 35 0 0 0 0.99</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_65</name><pose>45 75 0 0 0 1.30</pose></include>
+
+    <!-- Outer ring North (y > +20, x in [-55, +25]) - 5 trees. -->
+    <include><uri>model://Oak tree</uri><name>oak_tree_66</name><pose>-40 35 0 0 0 1.61</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_67</name><pose>-10 50 0 0 0 1.92</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_68</name><pose>20 35 0 0 0 2.23</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_69</name><pose>-25 75 0 0 0 2.54</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_70</name><pose>10 90 0 0 0 2.85</pose></include>
+
+    <!-- Outer ring West (x in [-75, -55]) - 5 trees. -->
+    <include><uri>model://Pine Tree</uri><name>pine_tree_71</name><pose>-60 -85 0 0 0 3.16</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_72</name><pose>-70 -45 0 0 0 3.47</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_73</name><pose>-65 -10 0 0 0 3.78</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_74</name><pose>-75 30 0 0 0 4.09</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_75</name><pose>-65 75 0 0 0 4.40</pose></include>
+
+    <!-- Outer ring South (y < -80, x in [-55, +25]) - 5 trees. -->
+    <include><uri>model://Oak tree</uri><name>oak_tree_76</name><pose>-45 -90 0 0 0 4.71</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_77</name><pose>-15 -95 0 0 0 5.02</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_78</name><pose>10 -90 0 0 0 5.33</pose></include>
+    <include><uri>model://Pine Tree</uri><name>pine_tree_79</name><pose>-30 -85 0 0 0 5.64</pose></include>
+    <include><uri>model://Oak tree</uri><name>oak_tree_80</name><pose>20 -85 0 0 0 5.95</pose></include>
+
+  </world>
+</sdf>

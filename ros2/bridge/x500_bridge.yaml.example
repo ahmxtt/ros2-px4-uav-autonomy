@@ -1,0 +1,24 @@
+- gz_topic_name: "/world/forest_map2/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan"
+  ros_topic_name: "/scan"
+  gz_type_name: "gz.msgs.LaserScan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  direction: GZ_TO_ROS
+  qos: { reliability: best_effort, durability: volatile, history: keep_last, depth: 10 }
+
+- gz_topic_name: "/clock"
+  ros_topic_name: "/clock"
+  gz_type_name: "gz.msgs.Clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  direction: GZ_TO_ROS
+
+- gz_topic_name: "/world/forest_map2/dynamic_pose/info"
+  ros_topic_name: "/gz_pose_array"
+  gz_type_name: "gz.msgs.Pose_V"
+  ros_type_name: "geometry_msgs/msg/PoseArray"
+  direction: GZ_TO_ROS
+
+- gz_topic_name: "/world/forest_map2/dynamic_pose/info"
+  ros_topic_name: "/gz_tf"
+  gz_type_name: "gz.msgs.Pose_V"
+  ros_type_name: "tf2_msgs/msg/TFMessage"
+  direction: GZ_TO_ROS

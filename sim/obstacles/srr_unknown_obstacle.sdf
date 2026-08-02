@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!--
+  The unknown obstacle for the Stop-Replan-Resume scenario.
+
+  A static red cylinder, r = 1.5 m, h = 3.0 m, standing on the ground at world
+  (-21.33, -43.71) - about 39.4 m along mission segment 1, roughly 3.6 mm from
+  the nominal path centreline. It is deliberately absent from the prior
+  occupancy map: the vehicle must find it with the 2D LiDAR.
+
+  The <pose> below places the cylinder centre at z = 1.5 so its base sits at
+  z = 0. tools/spawn_srr_obstacle.py also passes the pose in the spawn request,
+  which is what Gazebo actually applies; the two agree by construction.
+
+  Geometry, pose and material are carried unchanged from the canonical
+  scenario. Do not edit them - the published results and the published prior
+  map both depend on this exact placement.
+-->
+<sdf version="1.9">
+  <model name="srr_unknown_obstacle">
+    <static>true</static>
+    <pose>-21.330000 -43.710000 1.500000 0 0 0</pose>
+    <link name="link">
+      <inertial>
+        <mass>1.0</mass>
+        <inertia>
+          <ixx>1.0</ixx><iyy>1.0</iyy><izz>1.0</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>1.500000</radius>
+            <length>3.000000</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>1.500000</radius>
+            <length>3.000000</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.85 0.15 0.15 1</ambient>
+          <diffuse>0.85 0.15 0.15 1</diffuse>
+          <specular>0.20 0.05 0.05 1</specular>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

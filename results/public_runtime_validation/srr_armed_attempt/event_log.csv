@@ -1,0 +1,4 @@
+wall_s,event,info
+1.282689,node_initialized,"oracle_mode=off online_obstacle_xy=None online_obstacle_r=None gt_obstacle_xy=(-21.33, -43.71) gt_obstacle_r=1.5 (GT is metrics-only unless oracle-mode uses it)"
+1.338884,scan_topic_first_msg,topic=/scan_filtered
+24.401975,settle_altitude_cap_relaxed,cap=2.80m (takeoff+0.80)

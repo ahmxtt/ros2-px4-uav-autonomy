@@ -1,0 +1,33 @@
+verdict: PASS
+scenario_id: stop_replan_resume_perception
+validation_gate: Gate 6D-B
+validation_gate_note: 'Gate 6D-B: perception-driven Stop-Replan-Resume. Detection
+  from 2D-LiDAR clustering plus a novelty test against the prior map; the replan uses
+  the sensed obstacle on the unpatched prior. Ground truth was retained in a separate
+  evaluation-only namespace: it did not gate detection, obstacle construction, replanning
+  or control decisions, but it was used to compute diagnostic metrics and post-run
+  evaluation values. See docs/validation_gates.md.'
+oracle_mode: 'off'
+detection_mode: lidar_cluster_detection
+abort_reason: null
+conditions:
+  detection_mode_lidar_cluster_detection: true
+  perception_mode_no_ground_truth_online: true
+  perception_sensed_obstacle_built: true
+  scan_topic_received_messages: true
+  detection_confirmed: true
+  stop_hover_command_sent: true
+  hover_stable_ge_3s: true
+  replan_success: true
+  replan_runtime_le_3s: true
+  bspline_validation_pass: true
+  resume_started: true
+  rejoin_original_mission: true
+  mission_completed: true
+  no_failsafe_during_run: true
+  tracking_max_lt_1m: true
+  max_altitude_le_2p5: true
+  land_sent: true
+  disarm_seen: true
+  force_disarm_not_sent: true
+  immutable_artifacts_unchanged: true

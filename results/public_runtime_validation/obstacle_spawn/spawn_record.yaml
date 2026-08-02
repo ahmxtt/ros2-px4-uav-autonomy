@@ -1,0 +1,37 @@
+verdict: PASS
+tool: tools/spawn_srr_obstacle.py
+recorded_at_utc: '2026-08-02T16:40:19.518132+00:00'
+world: forest_map2
+model_name: srr_unknown_obstacle
+status: spawned
+spawned_this_invocation: true
+model_count_before: 88
+model_count_after: 89
+model_occurrences_after: 1
+obstacle:
+  position_world_xy_m:
+  - -21.33
+  - -43.71
+  z_base_world_m: 0.0
+  z_center_world_m: 1.5
+  radius_m: 1.5
+  height_m: 3.0
+  static: true
+pose_verification:
+  method: gz model -m <name>, first Pose block
+  measured_world_xyz_m:
+  - -21.33
+  - -43.71
+  - 1.5
+  tolerance_m: 0.05
+  match: true
+inputs:
+  obstacle_yaml: sim/obstacles/obstacle.yaml
+  obstacle_yaml_sha256: c3c7a29f2b87d93fb83b95ac188fc70df5f24d3bb41b223377db9022a9e3d49f
+  sdf: sim/obstacles/srr_unknown_obstacle.sdf
+  sdf_sha256: 335de14d8008142523d5b63b0a098f07fa9cf7664a8251061855f7be8c1a6adf
+spawn_service:
+  service: /world/forest_map2/create
+  reqtype: gz.msgs.EntityFactory
+  response: 'data: true'
+scope: Gazebo simulation only. No PX4 command, no ROS publication, no vehicle interaction.

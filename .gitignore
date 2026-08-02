@@ -1,0 +1,39 @@
+# --- Editor / OS scratch ---------------------------------------------------
+*.swp
+*~
+.DS_Store
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- ROS 2 / colcon --------------------------------------------------------
+install/
+log/
+
+# --- Runtime output --------------------------------------------------------
+# Live runs and regenerated maps are not committed; results/ is curated.
+runs/
+*.ulg
+*.db3
+*.mcap
+*.bag
+rosbag2_*/
+
+# Regenerated occupancy grids. The grid rebuilds byte-identically from the
+# SDF, so it is verified rather than stored.
+*.pgm
+!results/**/*.pgm
+
+# Runtime-generated bridge config (regenerated from live Gazebo introspection).
+ros2/bridge/x500_bridge.yaml

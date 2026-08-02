@@ -1,0 +1,96 @@
+n_transitions: 4
+max_pos_jump_m: 0.012490981562820901
+max_heading_jump_deg: 52.311165982085114
+max_yaw_rate_jump_rad_s: 0.25781851263823075
+transitions:
+- boundary_index: 5179
+  prev_segment_id: 1
+  prev_segment_type: leg
+  prev_segment_name: start_to_poi1
+  next_segment_id: 2
+  next_segment_type: orbit
+  next_segment_name: orbit_poi1
+  pos_jump_m: 0.0
+  heading_jump_rad: 0.2070154553071486
+  heading_jump_deg: 11.861111883078735
+  curvature_before_1_per_m: 0.3402615166799806
+  curvature_after_1_per_m: 0.16666666666666666
+  yaw_rate_before_rad_s: 0.5078185126382053
+  yaw_rate_after_rad_s: 0.24999999999997455
+  yaw_rate_jump_rad_s: 0.25781851263823075
+  speed_before_mps: 1.5
+  speed_after_mps: 1.5
+  speed_jump_mps: 0.0
+- boundary_index: 6864
+  prev_segment_id: 2
+  prev_segment_type: orbit
+  prev_segment_name: orbit_poi1
+  next_segment_id: 3
+  next_segment_type: leg
+  next_segment_name: poi1_to_poi2
+  pos_jump_m: 0.012490981562820901
+  heading_jump_rad: 0.9130020819446383
+  heading_jump_deg: 52.311165982085114
+  curvature_before_1_per_m: 0.16666666666666666
+  curvature_after_1_per_m: 0.30652658254759135
+  yaw_rate_before_rad_s: 0.25
+  yaw_rate_after_rad_s: 0.46418889699842986
+  yaw_rate_jump_rad_s: 0.21418889699842986
+  speed_before_mps: 1.5
+  speed_after_mps: 1.5
+  speed_jump_mps: 0.0
+- boundary_index: 9436
+  prev_segment_id: 3
+  prev_segment_type: leg
+  prev_segment_name: poi1_to_poi2
+  next_segment_id: 4
+  next_segment_type: orbit
+  next_segment_name: orbit_poi2
+  pos_jump_m: 0.0
+  heading_jump_rad: 0.18108339296997356
+  heading_jump_deg: 10.375314157088447
+  curvature_before_1_per_m: 0.0021070549672523044
+  curvature_after_1_per_m: 0.16666666666666666
+  yaw_rate_before_rad_s: 0.003144807362072983
+  yaw_rate_after_rad_s: 0.25
+  yaw_rate_jump_rad_s: 0.24685519263792702
+  speed_before_mps: 1.5
+  speed_after_mps: 1.5
+  speed_jump_mps: 0.0
+- boundary_index: 11109
+  prev_segment_id: 4
+  prev_segment_type: orbit
+  prev_segment_name: orbit_poi2
+  next_segment_id: 5
+  next_segment_type: leg
+  next_segment_name: poi2_to_start
+  pos_jump_m: 0.011228867944370939
+  heading_jump_rad: 0.7395069441037787
+  heading_jump_deg: 42.3706268177634
+  curvature_before_1_per_m: 0.16666666666666666
+  curvature_after_1_per_m: 0.13787375234688773
+  yaw_rate_before_rad_s: 0.25
+  yaw_rate_after_rad_s: 0.20622731994063814
+  yaw_rate_jump_rad_s: 0.04377268005936186
+  speed_before_mps: 1.5
+  speed_after_mps: 1.5
+  speed_jump_mps: 0.0
+tangent_geometry:
+  orbit1:
+    theta_entry_rad: -0.7745827113910013
+    theta_exit_rad: 1.2944251089048588
+    T_entry_xy:
+    - 19.288277732365465
+    - 0.8034926319499309
+    T_exit_xy:
+    - 16.637198255429425
+    - 10.772311657596013
+  orbit2:
+    theta_entry_rad: 1.0481365566861855
+    theta_exit_rad: 2.9944257303673183
+    T_entry_xy:
+    - -27.0048805375295
+    - 29.19896714795645
+    T_exit_xy:
+    - -35.93514287385962
+    - 24.879817632736096

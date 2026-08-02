@@ -1,0 +1,9 @@
+release: '0.1'
+content: 'Curated Stop-Replan-Resume result: one live PX4 SITL run in perception mode.'
+regenerable: false
+why_not_regenerable: Live PX4 SITL run. SITL execution is not deterministic. The offline
+  local-replan geometry can be re-derived from the recorded sensed obstacle.
+canonical_source: perception-mode stop-replan-resume run (private development archive)
+evidence_scope: single controlled run
+execution_constraint: The executor paces on wall-clock time, so a valid run requires
+  a Gazebo real-time factor near 1.0. This run executed at RTF ~= 0.98.

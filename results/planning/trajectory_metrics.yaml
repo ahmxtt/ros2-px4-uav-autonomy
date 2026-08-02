@@ -1,0 +1,47 @@
+scope: Cubic B-spline refinement of the planning path above. This is the single validated
+  leg, NOT the flown multi-POI mission.
+selected_attempt: bspline_s0_2.00m
+classification: robust_smoothed
+n_control_points: 53
+n_samples: 5108
+trajectory_length_m: 100.55722237052468
+length_change_vs_astar_pct: -1.548854232692051
+clearance_min_m: 1.0816653826391969
+clearance_mean_m: 2.930415887144812
+clearance_p10_m: 1.2041594578792296
+clearance_min_ge_r_pref: true
+collision_free: true
+max_deviation_from_astar_m: 0.25237412830916495
+mean_deviation_from_astar_m: 0.029334364683043193
+curvature_max_1_per_m: 0.5445001731021731
+speed_profile:
+  v_nominal_mps: 1.5
+  v_max_observed_mps: 1.5
+  v_min_observed_mps: 1.355192498221408
+  v_mean_observed_mps: 1.4995691387185377
+  a_lat_max_limit_mps2: 1.0
+  a_lat_max_observed_mps2: 1.0000000000000002
+  a_lat_within_limit: true
+  estimated_travel_time_s: 67.05788771145612
+attempts:
+- name: bspline_s0_2.00m
+  method: bspline_s0
+  control_step_m: 2.0
+  n_control_points: 53
+  classification: robust_smoothed
+  trajectory_length_m: 100.55722237052468
+  clearance_min_m: 1.0816653826391969
+  max_deviation_from_astar_m: 0.25237412830916495
+  curvature_max_1_per_m: 0.5445001731021731
+- name: bspline_s0_1.00m
+  method: bspline_s0
+  control_step_m: 1.0
+  n_control_points: 104
+  classification: robust_smoothed
+  trajectory_length_m: 100.80225516300223
+  clearance_min_m: 1.1423659658795864
+  max_deviation_from_astar_m: 0.12214464141738335
+  curvature_max_1_per_m: 1.1602493079953218
+note: The refinement cascade selects the FIRST attempt whose dense-sample clearance
+  reaches r_eff. Attempt 1 (2.0 m control step) already reached r_pref, so attempt
+  2 was evaluated but not selected.

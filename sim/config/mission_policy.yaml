@@ -1,0 +1,107 @@
+# Mission-planning policy. Single source of truth for the planning radii
+# and candidate-selection thresholds.
+#
+# Concept: separate "allowed" (hard inflation at r_eff) from "preferred"
+# (hard inflation at r_plan_min). Two A* candidates can be computed for the
+# same query and a classification decides which one is selected.
+#
+# This file is the SINGLE SOURCE OF TRUTH for the planning policy. Nothing
+# below is hard-coded in tool source. Who reads it:
+#   tools/plan_astar.py               --policy; all five values below
+#   tools/refine_trajectory.py        --policy; tracking_margin_m
+#   tools/reproduce_offline_demo.py   --policy; the radii and w_comfort
+#   tools/make_docs_figures.py        fixed path; the radii and w_comfort
+#   tests/test_regression_published_result.py
+#                                     fixed path; the radii and w_comfort
+# src/uav_autonomy/replanning.py mirrors r_eff, tracking_margin_m and
+# w_clearance as module constants, because the runtime replanner reads no
+# YAML. If a value here changes, change that module too.
+#
+# r_eff is NOT in this file: it is robot_radius in
+# sim/config/robot_map2_safe.yaml, the config every published planning result
+# was computed from.
+
+planning_policy:
+  # Soft tracking buffer added to the physical/effective robot radius.
+  #   r_pref = r_eff + tracking_margin_m   (e.g. 0.65 + 0.25 = 0.90)
+  tracking_margin_m: 0.25
+
+  # Comfort band width above r_pref. The robust candidate adds a soft cost
+  # for clearance ∈ [r_plan_min, r_comfort) to discourage paths that barely
+  # satisfy the planning clearance.
+  #   r_comfort = r_pref + comfort_margin_m   (e.g. 0.90 + 0.30 = 1.20)
+  comfort_margin_m: 0.30
+
+  # Reserved clearance above r_pref that the B-Spline smoothing may consume
+  # without dropping below r_eff. The robust candidate uses HARD inflation
+  # at r_plan_min instead of r_pref.
+  #   r_plan_min = r_pref + spline_shrinkage_budget_m  (e.g. 0.90 + 0.20 = 1.10)
+  # If r_comfort <= r_plan_min the comfort band collapses to zero width;
+  # tools keep both values apart and record r_plan_min_m and r_comfort_m in
+  # metrics.yaml, so the band width is recoverable from any published run.
+  spline_shrinkage_budget_m: 0.20
+
+  # alpha_length_factor: maximum acceptable ratio between robust path
+  # length and the start-to-goal straight-line distance for a "robust"
+  # classification. Longer paths are reclassified to "robust_long"
+  # (selection unchanged). See the note above `classification` below: no
+  # tool in this repository evaluates this threshold. tools/plan_astar.py
+  # records the measured ratio as alpha_actual in metrics.yaml.
+  alpha_length_factor: 1.8
+
+  # beta_boundary_factor: maximum acceptable ratio between robust path
+  # length and boundary path length for a "robust" classification.
+  # OPERATIONAL POLICY THRESHOLD, NOT theoretical optimum.
+  # In NO case does this auto-select the boundary path.
+  # As with alpha_length_factor, no tool in this repository evaluates it.
+  beta_boundary_factor: 1.30
+
+  # Soft-penalty weight used by the BOUNDARY candidate's A* over the band
+  # [r_eff, r_pref):
+  #   penalty = max(0, (r_pref - clearance) / (r_pref - r_eff))^2
+  #   edge_cost = step_length * (1 + w_clearance * penalty)
+  w_clearance: 5.0
+
+  # Soft-penalty weight used by the ROBUST candidate's A* over the comfort
+  # band [r_plan_min, r_comfort):
+  #   penalty_comfort = max(0, (r_comfort - clearance) / (r_comfort - r_plan_min))^2
+  #   edge_cost = step_length * (1 + w_comfort * penalty_comfort)
+  w_comfort: 3.0
+
+# Classification vocabulary. This block and the two thresholds above describe
+# the selection policy; nothing in this repository evaluates them.
+# tools/plan_astar.py computes ONE candidate per invocation, chosen with
+# --candidate robust | boundary | geometric, and records which one it used in
+# metrics.yaml. Comparing candidates and applying the labels below is the job
+# of the multi-leg mission planner, which is not part of this release.
+classification:
+  robust:
+    description: "r_pref path exists and its length is acceptable relative to the boundary and straight-line references. Preferred candidate."
+  robust_long:
+    description: "r_pref path exists but is significantly longer. Accepted with time/energy warning."
+  boundary_valid:
+    description: "only an r_eff path exists. Valid, but not preferred for execution."
+  fail:
+    description: "no r_eff-valid path exists."
+
+# Future architectural responsibility (documented now; not yet implemented):
+#   ReferenceManager.plan_with_policy(prior_map, start, goal, policy)
+#     -> PolicyResult {
+#          classification: robust | robust_long | boundary_valid | fail
+#          selected_path
+#          selected_candidate_type: robust_candidate | boundary_candidate | none
+#          metrics: { path_length, straight_line_distance, alpha_actual,
+#                     beta_actual, clearance_min, clearance_mean,
+#                     planning_time, nodes_expanded, warning? }
+#        }
+# The execution and replanning layers consume this contract directly.
+architecture_note:
+  future_owner: "ReferenceManager.plan_with_policy()"
+  current_implementation: >
+    The candidate searches themselves exist: a_star, a_star_clearance and
+    a_star_comfort in src/uav_autonomy/planning.py, exposed by
+    tools/plan_astar.py --candidate geometric | boundary | robust. What does
+    not exist here is the wrapper that runs two candidates and returns a
+    PolicyResult.
+  reuse_targets: ["nominal mission integration",
+                  "stop-replan-resume"]

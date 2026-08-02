@@ -1,0 +1,52 @@
+scope: Nominal multi-POI mission, PX4 SITL Offboard. Setpoint-tracking error = commanded
+  setpoint vs PX4/EKF local position. This is a CONTROL metric and is separate from
+  estimator consistency.
+run: single PX4 SITL run, verdict PASS, 5/5 segments completed
+phase: MISSION (excludes takeoff, settle, land)
+samples: 2922
+horizontal_error:
+  definition: sqrt(err_x^2 + err_y^2) in the PX4 local NED frame
+  mean_m: 0.21983063636311503
+  rmse_m: 0.23397169793763367
+  median_m: 0.22038293836294778
+  p95_m: 0.3781123617025286
+  max_m: 0.6094591671851363
+error_3d:
+  definition: sqrt(err_x^2 + err_y^2 + err_z^2)
+  mean_m: 0.22080210306725317
+  rmse_m: 0.23455340756328014
+  median_m: 0.22062371572667772
+  p95_m: 0.3809687969553246
+  max_m: 0.6094689205939873
+tracking_budget_m: 1.0
+tracking_window_breach: false
+setpoint_rate_hz:
+  target: 20.0
+  p50: 20.0
+  p95: 20.117
+altitude_m:
+  reference: 2.0
+  mean: 1.9982
+  min: 1.8134
+  max: 2.0591
+horizontal_speed_mps:
+  mean: 1.5829
+  p95: 1.7067
+  max: 1.8324
+  reference_max: 1.5
+mission_completed: true
+aborted: false
+failsafe_triggered: false
+offboard_dropout: false
+land_and_disarm: commanded and observed; no force-disarm
+max_abs_component_error:
+  definition: max(|err_x|, |err_y|, |err_z|) - the definition used in the thesis tables
+  mean_m: 0.19719192231348392
+  rmse_m: 0.210659728725344
+  median_m: 0.19000250000000002
+  p95_m: 0.3391566
+  max_m: 0.599829
+  note: Reported so the public figures can be reconciled with the thesis, which quotes
+    this definition. It is NOT interchangeable with the horizontal error above.
+rounding: Values are stored at full float precision. Documentation quotes them rounded
+  to three decimals; e.g. horizontal max 0.60945917 -> 0.609 m.

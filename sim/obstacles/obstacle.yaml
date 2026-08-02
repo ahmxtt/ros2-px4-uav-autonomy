@@ -1,0 +1,101 @@
+# Definition of the unknown obstacle for the Stop-Replan-Resume (SRR) scenario:
+# stop, plan a local detour, resume the original mission.
+#
+# HOW THIS FILE IS USED, and how it is NOT used
+# ---------------------------------------------
+# This is the obstacle's GROUND TRUTH. Which parts of the run may read it
+# depends entirely on --oracle-mode:
+#
+#   --oracle-mode off        (Gate 6D-B, perception-driven, the published run)
+#       Read once at startup into a separate evaluation-only namespace. It does
+#       not gate detection, obstacle construction, replanning or control
+#       decisions: the online-decision obstacle is left empty, so an accidental
+#       decision use fails loud rather than quietly helping the planner. It may
+#       still be read for diagnostics during the run - a per-tick
+#       distance-to-truth column - and afterwards, to score detection accuracy.
+#       The node runs correctly with this file absent, and that absence is the
+#       oracle-leak test.
+#
+#   --oracle-mode detection  (Gate 6D-A, mechanics validation)
+#       The detection trigger is taken from here instead of from the LiDAR.
+#
+#   --oracle-mode replan     (Gate 6D-A, mechanics validation)
+#       Detection and the replan geometry are both taken from here.
+#
+# The physical obstacle in Gazebo is a separate thing entirely: it is spawned
+# by tools/spawn_srr_obstacle.py from sim/obstacles/srr_unknown_obstacle.sdf.
+# This YAML does not put anything into the simulation. Perception mode needs
+# BOTH - the model physically present so the LiDAR can see it, and this file
+# either absent or confined to the evaluation-only namespace, so nothing here
+# can reach a decision.
+
+obstacle_id: unknown_static_1
+kind: unknown_static_cylindrical
+model_name: srr_unknown_obstacle          # the Gazebo model name, once spawned
+sdf: sim/obstacles/srr_unknown_obstacle.sdf
+
+position_world_xy_m:
+  - -21.33
+  - -43.71
+radius_m: 1.5
+height_m: 3.0
+z_base_world_m: 0.0
+altitude_band_m:                          # spans the 2.0 m reference altitude
+  - 0.0
+  - 4.0
+frame: Gazebo world ENU
+
+not_present_in_prior_map: true
+prior_map_note: >-
+  The execution prior rasterised from sim/worlds/forest_map2.sdf does not
+  contain this obstacle - the SDF world file does not contain it either. That
+  is the point: the replanner searches an unpatched prior and only the sensed
+  obstacle is stamped in at run time.
+
+segment_context:
+  segment_name: start_to_poi1
+  nearest_path_sample_idx: 2000
+  nearest_path_sample_xy_m: [-21.32968, -43.70645]
+  nearest_path_sample_s_m: 39.361118
+  nearest_path_sample_yaw_rad: 0.840819712
+  distance_to_path_centreline_m: 0.0035643933565234647
+
+verdict: PASS
+verdict_note: >-
+  The node refuses to start with a non-PASS verdict. An obstacle placement that
+  never passed its own checks must not silently drive a run.
+checks:
+  candidate_in_free_cell_of_execution_prior: true
+  candidate_within_max_d_to_path: true
+  candidate_forces_detour: true
+  candidate_not_overlapping_known_canopy: true
+  candidate_outside_takeoff_exclusion: true
+  at_least_one_detour_corridor_passable: true
+
+# Nearest trees, to show the obstacle sits in open space and that a detour fits.
+# canopy_gap_m is the free gap between the tree canopy and the obstacle surface.
+tree_clearances_nearest_5:
+  - {tree: oak_tree_38,  species: Oak tree,  d_centre_m: 8.765443514164017,  canopy_gap_m: 3.2654435141640175}
+  - {tree: oak_tree_60,  species: Oak tree,  d_centre_m: 10.507949371785154, canopy_gap_m: 5.007949371785154}
+  - {tree: pine_tree_59, species: Pine Tree, d_centre_m: 11.1377286732978,   canopy_gap_m: 8.1377286732978}
+  - {tree: oak_tree_44,  species: Oak tree,  d_centre_m: 11.368069317170791, canopy_gap_m: 5.868069317170791}
+  - {tree: pine_tree_39, species: Pine Tree, d_centre_m: 11.403201304896795, canopy_gap_m: 8.403201304896795}
+
+# Is there room to go around? Effective disks are the obstacle and tree radii
+# grown by the planning margin; free_corridor_width_m is what is left between
+# them. A 1.3 m corridor clears the vehicle's 1.3 m planning diameter.
+detour_corridor_analysis:
+  - tree: oak_tree_38
+    species: Oak tree
+    d_centre_m: 8.765443514164017
+    tree_eff_disk_r_m: 4.9
+    obstacle_eff_disk_r_m: 2.4
+    free_corridor_width_m: 1.4654435141640167
+    passable_robot_diameter_1p3_m: true
+  - tree: oak_tree_60
+    species: Oak tree
+    d_centre_m: 10.507949371785154
+    tree_eff_disk_r_m: 4.9
+    obstacle_eff_disk_r_m: 2.4
+    free_corridor_width_m: 3.207949371785153
+    passable_robot_diameter_1p3_m: true

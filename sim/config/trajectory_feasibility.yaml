@@ -1,0 +1,6 @@
+# Phase 2E feasibility-analysis assumptions.
+# These are offline evaluation parameters, not robot geometry.
+
+max_lateral_acceleration_mps2: 2.0
+speed_cap_mps: 3.0
+curvature_epsilon_1_per_m: 1.0e-6

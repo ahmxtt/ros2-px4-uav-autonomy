@@ -1,0 +1,20 @@
+# ROS 2 runtime dependencies for ros2/nodes/.
+#
+# These are NOT installable with pip. They come from a ROS 2 Jazzy
+# installation and a colcon workspace overlay:
+#
+#   rclpy                 - ROS 2 Jazzy (apt: ros-jazzy-rclpy)
+#   sensor_msgs           - ROS 2 Jazzy (apt: ros-jazzy-sensor-msgs)
+#   geometry_msgs         - ROS 2 Jazzy (apt: ros-jazzy-geometry-msgs)
+#   nav_msgs              - ROS 2 Jazzy (apt: ros-jazzy-nav-msgs)
+#   std_msgs              - ROS 2 Jazzy (apt: ros-jazzy-std-msgs)
+#   tf2_ros               - ROS 2 Jazzy (apt: ros-jazzy-tf2-ros)
+#   visualization_msgs    - ROS 2 Jazzy (apt: ros-jazzy-visualization-msgs)
+#   px4_msgs              - source build, pinned in docs/installation.md
+#
+# Plus, outside Python:
+#   Micro XRCE-DDS Agent  - source build
+#   PX4-Autopilot         - source build, commit pinned in docs/installation.md
+#   Gazebo Sim Harmonic   - apt
+#
+# See docs/installation.md.

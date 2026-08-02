@@ -1,0 +1,100 @@
+# THE planning configuration. Every published planning result in this
+# repository was computed from this file: tools/plan_astar.py,
+# tools/reduce_path_los.py, tools/refine_trajectory.py,
+# tools/reproduce_offline_demo.py, tools/make_docs_figures.py and
+# tests/test_regression_published_result.py all read robot_radius from here.
+#
+# Do not use this file as a description of the physical airframe. An earlier
+# nominal radius of 0.50 m was rejected for public planning because it does not
+# enclose the 0.5155 m propeller-tip envelope; it is not shipped.
+
+airframe_real: x650_holybro        # target platform: 650 mm wheelbase, 15" props
+airframe_sim:  x500_lidar_2d       # the SITL airframe actually flown
+
+airframe_sim_rationale: >
+  PX4 ships no X650 SITL model, so the PX4 X500 model is the simulation
+  airframe while the planning geometry is sized toward the Holybro X650.
+
+  Sized toward the X650: the planning radius below, derived from the X650's
+  published 650 mm wheelbase and 15" propellers.
+
+  NOT adapted, and therefore X500 values: mass, inertia, thrust curves, motor
+  layout, and lidar_mount.xyz.
+
+  Consequence: the planning geometry is X650-oriented, the closed-loop dynamics
+  are the X500 model's. Execution results that depend on dynamics - tracking
+  error, stopping behaviour, hover transitions, the rejoin transient - are
+  X650-oriented simulation results, not a real-flight validation of the X650.
+
+base_frame:    base_link
+odom_frame:    odom
+map_frame:     map
+planner_frame: map
+
+# ---------------------------------------------------------------------------
+# The effective planning radius, r_eff
+# ---------------------------------------------------------------------------
+# This is the single number the planner turns into hard binary inflation of the
+# occupancy grid. Everything downstream - the A* path, the line-of-sight
+# reduction, the clearance classification - is defined relative to it.
+#
+# Derivation from the vendor's published X650 figures (650 mm wheelbase
+# diagonal, 15" propellers):
+#
+#   frame radius, motor hub to centre   0.650 / 2         = 0.3250 m
+#   propeller radius                    15 * 0.0254 / 2   = 0.1905 m
+#   propeller-tip envelope radius       sum               = 0.5155 m
+#   safety margin                                         = 0.1345 m
+#   r_eff                                                 = 0.6500 m
+#
+# So r_eff encloses the smallest circle that actually contains the turning
+# aircraft, with 0.1345 m to spare.
+#
+# Two other readings of 0.65 m appear in the record. They are consistent with
+# the above but they are not independent corroboration of it:
+#   - 0.50 m nominal + 0.15 m margin. The 0.50 m nominal is itself smaller than
+#     the 0.5155 m propeller-tip envelope, so this reading understates what the
+#     margin is doing.
+#   - the circumscribed radius of the +/-0.46 m square footprint, which is
+#     sqrt(2) * 0.46 = 0.650538 m. This agrees to within 0.54 mm, but it is
+#     circular: 0.46 is itself 0.65 / sqrt(2) to two decimals, and no
+#     measurement backs the 0.46.
+#
+# The footprint polygon below is documentation. No code in this repository
+# reads it; the planner is circular and uses robot_radius alone.
+robot_radius: 0.65                 # metres - r_eff, the effective planning radius
+footprint:                         # metres, clockwise, base_link origin at (0,0)
+  - [ 0.46,  0.46]
+  - [ 0.46, -0.46]
+  - [-0.46, -0.46]
+  - [-0.46,  0.46]
+
+# The clearance policy built on top of r_eff. These are not airframe
+# dimensions; they are how much room the trajectory is asked to keep.
+#   r_pref      0.90 m  preferred clearance. A refined trajectory at or above
+#                       it is classified robust_smoothed; between r_eff and
+#                       r_pref it is boundary_smoothed.
+#   r_plan_min  1.10 m  what the comfort planner inflates to, so that the
+#                       spline still holds r_pref after it cuts corners.
+#                       r_plan_min - r_pref = 0.20 m is the spline budget.
+#   r_comfort   1.20 m  soft preference: the comfort cost penalises cells with
+#                       less clearance than this, without forbidding them.
+# They live in sim/config/mission_policy.yaml, which is where the planner reads
+# them from. They are repeated here only as a reading aid.
+
+# Declared flight altitude for the 2D planning layer. The 2D LiDAR sweeps at
+# this altitude; the 2D occupancy grid is a horizontal slice at about this height.
+planning_altitude_m: 2.0
+
+# Sensor mount.
+# child_frame is the live /scan header.frame_id emitted by the Gazebo bridge.
+# The deep model/link/sensor name is the default Gazebo naming for the
+# x500_lidar_2d SITL target - treat it as opaque.
+# NOTE: xyz/rpy are taken from the X500 SITL SDF. Correct in simulation,
+# because the simulated airframe IS the X500. PENDING VERIFICATION against real
+# X650 hardware: the mount offset on the physical aircraft may differ.
+lidar_mount:
+  parent_frame: base_link
+  child_frame:  x500_lidar_2d_0/link/lidar_2d_v2
+  xyz: [0.12, 0.0, 0.24062]        # metres
+  rpy: [0.0,  0.0, 0.0]            # radians

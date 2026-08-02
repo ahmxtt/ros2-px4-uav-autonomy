@@ -1,0 +1,18 @@
+content: Window of the nominal mission reference segment 'start_to_poi1' around the
+  Stop-Replan-Resume event.
+why_a_window: The full multi-POI mission reference (16157 samples) is a large derived
+  product that this release does not ship. The local replanner reads the segment only
+  for the ROI bounding box and for the lead-in / tail-in anchors, so this window is
+  the complete input for reproducing the replan geometry.
+segment_name: start_to_poi1
+n_samples: 2891
+s_range_m:
+- 15.019014
+- 71.995748
+full_segment_n_samples: 5179
+full_segment_s_range_m:
+- 0.0
+- 101.9888
+frame: Gazebo world ENU
+source: nominal multi-POI mission reference (private development archive)
+used_by: tools/reproduce_srr_geometry.py

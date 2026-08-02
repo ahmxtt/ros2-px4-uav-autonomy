@@ -1,0 +1,15 @@
+release: '0.1'
+content: Curated nominal planning and trajectory-refinement results.
+regenerable: true
+regenerate_with: python3 tools/reproduce_offline_demo.py --output-dir <dir>
+canonical_sources:
+  planning: single-leg planning run (private development archive)
+  trajectory: single-leg trajectory refinement run (private development archive)
+environment_of_record:
+  python: 3.12.3
+  numpy: 1.26.4
+  scipy: 1.11.4
+  matplotlib: 3.6.3
+  pillow: 10.2.0
+verification: 'Regenerated from the SDF with uav_autonomy: A* path cell-for-cell identical,
+  occupancy grid byte-identical, trajectory metrics equal to within 1e-9.'

@@ -1,0 +1,83 @@
+name: forest_map2
+description: >
+  Forest robustness scenario. Larger and denser woodland than a plain
+  free-space test: 150 x 200 m world, 80 x 100 m active mission zone, 80 trees,
+  an S-shaped forest track of at least 60 m, and a deliberately narrow passage
+  as a design stress point.
+
+  This file is read by one tool: tools/plan_astar.py --scenario, which takes
+  planner_start_world_frame and goal_region_world_frame from it and records
+  its sha256 in the run manifest. Every other value here is documentation.
+  For SITL the world itself is loaded by tools/sitl_stack.sh, not from this
+  file. The repository SDF at sim/worlds/forest_map2.sdf is the single source
+  of truth.
+
+world:
+  # No absolute path: scenario files are versioned and must stay portable.
+  path_relative_to_repo: sim/worlds/forest_map2.sdf
+  sha256: 30080eb7eb583618d311dc5be05c51a42e0105e131797e147cad791c4f8c8edf
+  scene_equivalence: >
+    The repository SDF (sha256 above) is the single source of truth. PX4 loads
+    exactly these bytes: tools/sitl_stack.sh gives PX4 a scratch working
+    directory with its own gz_env.sh, which points PX4_GZ_WORLDS at this
+    repository's sim/worlds. Nothing is copied into or written to the PX4
+    tree, and there is no symlink to keep in step.
+  # How sitl_stack.sh selects the world (defaults; both are overridable).
+  px4_world_env:
+    PX4_GZ_WORLD: forest_map2
+    PX4_GZ_WORLDS: <repo>/sim/worlds
+  # PX4 build the validated runs used: v1.16.0-rc1-449-gbfbc76189e.
+  px4_commit: bfbc76189e48fbb1250667eaa89cafb9d8aa8b9e
+
+# Recorded here for reference. The value sitl_stack.sh actually exports is its
+# own PX4_SIM_MODEL default, which is the same string.
+airframe_sim: x500_lidar_2d
+px4_sim_target: gz_x500_lidar_2d
+
+# All coordinates are in the GAZEBO WORLD FRAME (ENU), which is stable across
+# runs. The map frame is expected to coincide with the world frame at the
+# vehicle spawn pose.
+coordinate_frames:
+  primary: gazebo_world
+  world_map_alignment_note: >
+    The map frame aligns with the world frame at the UAV spawn pose. Only
+    world-frame coordinates are authoritative in this file.
+
+# UAV spawn pose in the Gazebo frame. Distinct from planner_start_world_frame:
+# the latter is the post-takeoff lateral handoff position, in territory the
+# 2D LiDAR has actually swept. This pose is also the PX4 local-NED origin, and
+# it is the SPAWN_POSE default of tools/sitl_stack.sh.
+start_pose_world_frame:
+  x: -50.0
+  y: -70.0
+  z: 0.5
+  yaw: 0.0
+
+planner_start_world_frame:
+  x: -48.0
+  y: -70.0
+  yaw: 0.0
+
+# The goal is a REGION around the incident point, not a single point.
+goal_region_world_frame:
+  center:
+    x: 15.0
+    y: 5.0
+  radius: 2.0
+  yaw_tolerance: null # unconstrained; success = any pose inside the circle
+
+# Orbit preparation ring around the incident point. Geometry only, and read by
+# nothing in this repository: the orbit generator is not part of this release.
+orbit_ring_world_frame:
+  center:
+    x: 15.0
+    y: 5.0
+  inner_radius: 5.0
+  outer_radius: 8.0
+
+notes:
+  - "Goal is a REGION, not a point: success means the plan endpoint lies within radius of center."
+  - "The orbit ring is prepared geometry; this scenario file makes no orbit-execution claim."
+  - "The narrow passage near W3 at approximately (-15, -35) is a deliberate design stress test (tree-centre spacing ~2.2 m)."
+  - "The forest track is a visual-only segmented polyline without collision; the planner sees only the obstacle and inflation map."
+  - "The world references the Gazebo Fuel models 'Pine Tree' and 'Oak tree'. Their meshes are not vendored here; see NOTICE.md."

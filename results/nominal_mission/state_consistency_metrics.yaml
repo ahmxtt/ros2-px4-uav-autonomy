@@ -1,0 +1,44 @@
+scope: 'Estimator consistency: Gazebo ground-truth pose vs PX4/EKF local position
+  over a complete nominal mission. This is an ESTIMATION metric and is separate from
+  the setpoint-tracking error above. The two must not be combined or compared.'
+run: separate PX4 SITL run of the same nominal mission, with ground-truth pose recording
+  enabled; verdict PASS
+transform:
+  formulas: x_NED=y_world-Y0; y_NED=x_world-X0; z_NED=-z_world; yaw_NED=wrap_pi(pi/2-yaw_world)
+  X0_m: -50.0
+  Y0_m: -70.0
+time_alignment:
+  method: wall clock (single recorder process)
+  median_dt_s: 0.0043
+  p95_dt_s: 0.0082
+  max_dt_s: 0.0609
+  sim_time_alignment_valid: false
+  sim_time_note: PX4 lpos timestamps are Unix microseconds while the ground-truth
+    stamp is simulation-relative; their offset is not constant, so a single-offset
+    sim-time alignment is invalid. Wall-clock alignment is used instead.
+subset: airborne (height > 0.5 m)
+samples: 14869
+horizontal_error:
+  rmse_m: 0.2262
+  mean_m: 0.2003
+  median_m: 0.2001
+  p95_m: 0.3962
+  max_m: 0.4449
+error_3d:
+  rmse_m: 0.2278
+  max_m: 0.4475
+mean_offset_m:
+  dx: 0.0598
+  dy: 0.123
+  dz: 0.0192
+all_samples_reference:
+  n: 16566
+  horiz_rmse_m: 0.2155
+interpretation: Ground truth and the PX4 estimate agree at the decimetre level over
+  the complete mission. This supports the transform and state-consistency argument.
+  It is not an estimator-accuracy benchmark and no SLAM or sensor-fusion method is
+  claimed.
+simulation_only: true
+real_hardware_used: false
+rounding: Values as recorded by the source audit. Documentation quotes them rounded
+  to three decimals.

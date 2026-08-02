@@ -1,0 +1,65 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+
+Visualization Manager:
+  Global Options:
+    Fixed Frame: map
+    Frame Rate: 30
+
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Plane: XY
+
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Frame Timeout: 15.0
+      Show Axes: false
+      Show Names: false
+
+    - Class: rviz_default_plugins/Map
+      Name: Map /map
+      Enabled: true
+      Topic: /map
+      Alpha: 0.7
+
+    - Class: rviz_default_plugins/LaserScan
+      Name: LiDAR /scan_filtered
+      Enabled: true
+      Topic:
+        Value: /scan_filtered
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Style: Points
+      Size (Pixels): 3
+
+    - Class: rviz_default_plugins/Odometry
+      Name: Odom /ground_truth/odom
+      Enabled: true
+      Topic: /ground_truth/odom
+      Reliability Policy: Best Effort
+      Durability Policy: Volatile
+      Keep: 100
+      Shape: Arrow
+      Shaft Length: 0.15
+      Shaft Radius: 0.03
+      Head Length: 0.08
+      Head Radius: 0.06
+
+    - Class: rviz_default_plugins/MarkerArray
+      Name: UAV Markers /uav_marker_model
+      Enabled: true
+      Topic: /uav_marker_model
+      Reliability Policy: Best Effort
+      Durability Policy: Volatile
+
+Views:
+  Current:
+    Class: rviz_default_plugins/Orbit

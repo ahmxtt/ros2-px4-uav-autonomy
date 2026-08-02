@@ -1,0 +1,15 @@
+# Offline pipeline only: no ROS, no PX4, no Gazebo.
+# Sufficient for tools/reproduce_offline_demo.py and the full test suite.
+#
+# Equivalent to `pip install -e .`; kept as a plain list for environments
+# that prefer requirements files.
+#
+# The published results were produced with the pinned versions noted in
+# docs/installation.md. The floors below are looser because the pipeline does
+# not depend on version-specific behaviour, but bit-exact agreement with the
+# published trajectory metrics may require the exact pins.
+numpy>=1.24
+scipy>=1.10
+pyyaml>=6.0
+pillow>=9.0
+matplotlib>=3.5

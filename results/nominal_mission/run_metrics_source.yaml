@@ -1,0 +1,156 @@
+verdict: PASS
+timestamp_iso: 2026-05-19T23:17:33+0200
+mode: armed_short_segment
+arm_flag: true
+eyes_flag: true
+armed_path_enabled: true
+topics_visible: true
+first_status_seen: true
+first_lpos_seen: true
+first_lpos_valid: true
+failsafe_flags_subscribed: true
+ekf_ready:
+  reached: true
+  time_s: 20.60047557500002
+hold_setpoint_ned_m:
+  x: 0.025
+  y: -0.025
+  z: -2.0
+handshake:
+  nav_state_after_handshake: 14
+  nav_state_offboard_reached: true
+  arm_attempted: true
+  arm_reached: true
+settle:
+  completed: true
+  time_s: 10.800292286001422
+  max_abs_err_m: 1.98565673828125
+mission:
+  started: true
+  completed: true
+  started_wall_s: 34.00079641400043
+  stopped_wall_s: 328.3008258159989
+  messages_sent: 5804
+  achieved_rate_hz:
+    p50: 19.999745603306962
+    p95: 20.116546621340717
+    p99: 20.208977397390775
+    target: 20.0
+  tracking:
+    max_err_m: 0.5998294570312481
+    rolling_1s_max_err_m: 0.5998294570312481
+    window_breach: false
+    max_tracking_error_m_setting: 1.0
+  nav_state_left_offboard_in_mission: false
+land_disarm:
+  land_sent: true
+  disarm_seen: true
+  force_disarm_sent: false
+nav_states_observed:
+- 2
+- 14
+- 18
+arming_states_observed:
+- 1
+- 2
+aborted: false
+abort_reason: ''
+refusal_reasons: []
+segment:
+  segment_id: -1
+  segment_name: MULTI_SEGMENT
+  n_rows_selected: 5725
+  selected_duration_s: 286.158823
+  selected_duration_stretched_s: 286.158823
+  bounds_ned_m:
+    x_min: 0.025
+    x_max: 99.999946
+    y_min: -0.025
+    y_max: 70.999954
+    z_min: -2.0
+    z_max: -2.0
+safety_caps:
+  speed_scale_hard_cap: 0.7
+  max_altitude_hard_cap_m: 3.5
+  tracking_window_s: 1.0
+multi_segment_enabled: true
+per_segment:
+- segment_id: 1
+  segment_name: start_to_poi1
+  segment_type: leg
+  n_rows: 742
+  messages_sent_approx: 742
+  start_wall_s: 34.10087524299888
+  end_wall_s: 108.2008917660005
+  duration_s: 74.10001652300161
+  tracking_rmse_m: 0.198417106416131
+  tracking_max_err_m: 0.5998294570312481
+  tracking_rolling_1s_max_err_m: 0.5998294570312481
+  tracking_mean_err_m: 0.1744979542353108
+  tracking_p95_err_m: 0.3632301932373032
+  segment_completed: true
+- segment_id: 2
+  segment_name: orbit_poi1
+  segment_type: orbit
+  n_rows: 587
+  messages_sent_approx: 587
+  start_wall_s: 108.30070288800016
+  end_wall_s: 166.90073113899962
+  duration_s: 58.60002825099946
+  tracking_rmse_m: 0.21839144338634658
+  tracking_max_err_m: 0.3288081894531274
+  tracking_rolling_1s_max_err_m: 0.3288081894531274
+  tracking_mean_err_m: 0.21580185184573658
+  tracking_p95_err_m: 0.2687421740722655
+  segment_completed: true
+- segment_id: 3
+  segment_name: poi1_to_poi2
+  segment_type: leg
+  n_rows: 340
+  messages_sent_approx: 340
+  start_wall_s: 167.00065785900006
+  end_wall_s: 200.90064471299956
+  duration_s: 33.89998685399951
+  tracking_rmse_m: 0.2143581497188561
+  tracking_max_err_m: 0.451143614746087
+  tracking_rolling_1s_max_err_m: 0.451143614746087
+  tracking_mean_err_m: 0.1921634134015247
+  tracking_p95_err_m: 0.38242868115234785
+  segment_completed: true
+- segment_id: 4
+  segment_name: orbit_poi2
+  segment_type: orbit
+  n_rows: 584
+  messages_sent_approx: 584
+  start_wall_s: 201.00049699699957
+  end_wall_s: 259.3006526480003
+  duration_s: 58.30015565100075
+  tracking_rmse_m: 0.212930689355862
+  tracking_max_err_m: 0.2784733852539034
+  tracking_rolling_1s_max_err_m: 0.2784733852539034
+  tracking_mean_err_m: 0.21053925187453185
+  tracking_p95_err_m: 0.2590872812500038
+  segment_completed: true
+- segment_id: 5
+  segment_name: poi2_to_start
+  segment_type: leg
+  n_rows: 669
+  messages_sent_approx: 669
+  start_wall_s: 259.4007235270001
+  end_wall_s: 326.2007234040011
+  duration_s: 66.79999987700103
+  tracking_rmse_m: 0.21303256665972198
+  tracking_max_err_m: 0.5465487635192874
+  tracking_rolling_1s_max_err_m: 0.5465487635192874
+  tracking_mean_err_m: 0.1969374288465802
+  tracking_p95_err_m: 0.38019767138671945
+  segment_completed: true
+diagnostics:
+  optional_topics_status:
+    failsafe_flags: active
+    vehicle_control_mode: active
+    battery_status_v1: active
+    estimator_status_flags: active
+    estimator_status: not_exported_by_this_px4_build
+  first_failsafe_tick: null
+  offboard_drop_tick: null
