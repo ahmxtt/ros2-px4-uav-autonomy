@@ -98,7 +98,7 @@ classes.** They come from different runs and measure different things.
 | Ground truth vs. PX4 estimate, airborne, n = 14 869 | horizontal RMSE 0.226 m; consistency check of the integration, **not** an estimator benchmark | 3 |
 | Local detour geometry | 23.178 m, min. clearance 0.808 m → `boundary_smoothed` (≥ `r_eff` 0.65 m, **below** `r_pref` 0.90 m) | 2 |
 | Handover continuity | position jump 0.245 m, yaw jump 11.07° | 2 (reproduced), 3 (flown) |
-| Stop–Replan–Resume run | online replan 0.251 s (budget 3 s), rejoin distance 0.006 m, mission completed, no failsafe, max. tracking error 0.802 m | 3 |
+| Stop–Replan–Resume run | online replan 0.251 s, the reported internal computation and validation time (`t_total_s`), excluding the preceding loading of inputs; recorded wall-clock span 0.322 s; budget 3 s. Rejoin distance 0.006 m, mission completed, no failsafe, max. tracking error 0.802 m | 3 |
 
 <p>
   <img src="docs/figures/nominal_planning.png" alt="Nominal planning" width="49%">

@@ -100,7 +100,8 @@ factor cost of a GUI.
 
 ## Continuous supervision, not end-of-run checking
 
-While armed, the executor monitors on every tick:
+While armed, the parent mission executor (`offboard_mission_executor.py`)
+monitors the following on every control tick of its own states:
 
 | Watch | Action on violation |
 |---|---|
@@ -109,6 +110,23 @@ While armed, the executor monitors on every tick:
 | Absolute altitude cap exceeded | abort, controlled land |
 | PX4 failsafe flag raised | recorded, abort path |
 | Arming state changed unexpectedly | recorded in the run report only; **no abort is triggered by it** |
+
+**This does not hold uniformly in the Stop–Replan–Resume node.** Its own states
+(`DETECTED`, `STOP_HOVER`, `REPLAN_LOCAL_ROI`, `RESUME_REPLAN_REFERENCE`)
+return before the parent control tick and run their own, smaller set of checks
+(`stop_replan_resume_node.py`, `_control_tick` and the per-state handlers):
+
+| SRR state | Checks it runs | Parent checks it skips |
+|---|---|---|
+| `DETECTED` | none; it hands over to `STOP_HOVER` on the same tick | all |
+| `STOP_HOVER` | navigation state, failsafe flag, altitude cap, status and local-position staleness, hover timeout | tracking-error window, `--max-run-s` |
+| `REPLAN_LOCAL_ROI` | replan runtime budget and an exception guard around the replan body; the replan runs synchronously, so no tick, and no check, runs until it returns | all per-tick checks, `--max-run-s` |
+| `RESUME_REPLAN_REFERENCE` | navigation state, failsafe flag, altitude cap, local-position staleness, tracking-error window (on each published replan setpoint) | status staleness, `--max-run-s` |
+
+`REJOIN_ORIGINAL_MISSION` hands straight back to the parent's `MISSION` state,
+where the full table above applies again. These gaps are known runtime defects
+and are **not fixed** in this release; see
+[limitations.md](limitations.md#known-runtime-defects-documented-not-fixed).
 
 An abort stops advancing along the reference: the stream keeps publishing the
 last mission setpoint (or the hold setpoint, if the abort fires before

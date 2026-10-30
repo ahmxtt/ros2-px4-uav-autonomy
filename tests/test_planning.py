@@ -216,7 +216,7 @@ def test_cell_penalty_bounds_and_monotonicity():
     assert cell_penalty(0.50, 0.65, 0.90) == 1.0
     mid = cell_penalty(0.775, 0.65, 0.90)
     assert 0.0 < mid < 1.0
-    # Non-increasing in clearance -> admissibility is preserved.
+    # Non-increasing in clearance: closer to an obstacle never costs less.
     xs = np.linspace(0.6, 1.0, 40)
     ps = [cell_penalty(x, 0.65, 0.90) for x in xs]
     assert all(a >= b - 1e-12 for a, b in zip(ps, ps[1:]))

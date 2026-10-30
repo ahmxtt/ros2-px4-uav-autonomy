@@ -118,7 +118,18 @@ measured to the *boundary* of the goal disc, and a total tie-break on
 `(f, g, row, col)` so repeated runs are byte-identical.
 
 Both soft costs are non-negative, so every penalised edge costs at least its
-geometric length and the octile heuristic remains admissible.
+geometric length: the penalties never make the heuristic overestimate more
+than it does on the unpenalised grid. The heuristic is consistent and, towards
+a single goal cell, admissible. Towards the goal *disc* (octile distance to
+the disc centre minus the radius `R`) it is only approximately admissible: a
+goal cell inside the Euclidean disc can be up to `sqrt(1 + OCTILE_DIAG²) · R`
+octile units from the centre, so the heuristic can overestimate the cost to
+the nearest goal cell by at most `(sqrt(1 + OCTILE_DIAG²) − 1) · R ≈ 0.082 · R`
+cells. For the 6-cell goal discs used here that bound is 0.49 cells (largest
+observed overestimate 0.24 cells), so a returned path can exceed the optimum
+by at most 0.49 cells, under 0.025 m at 0.05 m/cell. `tests/test_planning.py`
+pins the bound. The heuristic is left unchanged because every published node
+count depends on it.
 
 **The smoothing budget.** The robust candidate searches at
 `r_plan_min = r_pref + spline_shrinkage_budget = 1.10 m`, above the 0.90 m the

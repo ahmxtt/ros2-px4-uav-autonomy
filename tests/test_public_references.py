@@ -11,6 +11,7 @@ deliberately left out of the extraction.
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -25,9 +26,6 @@ SKIP_DIRS = {".git", "__pycache__", ".venv", ".pytest_cache", "figures"}
 # Things that must never appear in a public file.
 FORBIDDEN = [
     (r"/home/[a-z]", "an absolute home path"),
-    (r"\bdragonlfy\b", "a developer user name"),
-    (r"\bDragonflyJr\b", "a developer host name"),
-    (r"\bthesis_config\b", "the private repository name"),
     (r"scripts/pane_\w+\.sh", "a private launcher script"),
     (r"start_x500_stack_tmux", "a private launcher script"),
     (r"\bartifacts/[a-z0-9_]+", "a private artifact directory"),
@@ -37,6 +35,19 @@ FORBIDDEN = [
     (r"build_mission_reference\.py", "a tool that was not extracted"),
     (r"gate\d[a-d]?_[a-z_]+\.py", "a gate-named private tool"),
 ]
+
+# Private identifiers, matched by the SHA-256 of a whole word so this public
+# file does not have to spell them out. Case-sensitive, and a "word" is a run
+# of \w characters, so this matches exactly what a \bname\b pattern would.
+FORBIDDEN_WORD_SHA256 = {
+    "e0c4c5bcf9896d6790113bd633d5db1c2f4c747c8f43b7a871d7e520ea8d44fb":
+        "a developer user name",
+    "900146cc7668e5a7a3367dc95397f95cbd9bad2fa61e06dc12dcf5e8ae1b46a2":
+        "a developer host name",
+    "1afeefabaf669febb67403d9f7fcbf964760d29dd0ab1e2ac2e6e2078948cb08":
+        "the private repository name",
+}
+WORD = re.compile(r"\w+")
 
 # Referenced paths that are produced by a documented command rather than
 # shipped. Keyed by the exact string as written.
@@ -66,6 +77,13 @@ def test_no_private_paths_or_omitted_tools():
         text = path.read_text(errors="replace")
         for pattern, why in FORBIDDEN:
             for m in re.finditer(pattern, text):
+                line = text[:m.start()].count("\n") + 1
+                problems.append(
+                    f"{path.relative_to(REPO)}:{line}: {m.group(0)!r} is {why}")
+        for m in WORD.finditer(text):
+            why = FORBIDDEN_WORD_SHA256.get(
+                hashlib.sha256(m.group(0).encode()).hexdigest())
+            if why is not None:
                 line = text[:m.start()].count("\n") + 1
                 problems.append(
                     f"{path.relative_to(REPO)}:{line}: {m.group(0)!r} is {why}")
