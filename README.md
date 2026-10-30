@@ -23,11 +23,14 @@ terrain. ROS 2 Jazzy · PX4 · Gazebo Harmonic · Python.**
 
 ![Architecture](docs/figures/architecture.png)
 
-*Green: offline core in `src/uav_autonomy/`. Orange: ROS 2 runtime in
-`ros2/nodes/`. Blue: obstacle-response path. The B-spline is fitted to the A\*
-path; line-of-sight reduction is a diagnostic side branch. The multi-POI
-mission reference is published as a fixed input; the stitcher that produced
-it is not part of this release.*
+*Green: offline core in `src/uav_autonomy/` and `tools/`. Orange: ROS 2
+runtime in `ros2/nodes/` and the simulator. Blue: the Stop–Replan–Resume
+states, which `StopReplanResumeNode` adds as a subclass of the mission
+executor, so the detour is published by the same node. The B-spline is fitted
+to the A\* path; line-of-sight reduction is a diagnostic side branch. The
+multi-POI mission reference is published as a fixed input; the stitcher that
+produced it is not part of this release. Source:
+[`architecture.drawio`](docs/figures/architecture.drawio).*
 
 ## Technical contributions
 
