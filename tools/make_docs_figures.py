@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-"""Regenerate the three documentation figures from public code and data only.
+"""Regenerate the two computed documentation figures from public code and data.
 
 The figures are committed under ``docs/figures/`` because a README must render
 on GitHub without the reader running anything. This script is how they are
 produced, so they are auditable rather than opaque:
 
-1. ``architecture.png``  - the pipeline overview (drawn, not measured).
-2. ``nominal_planning.png`` - the A* path and the refined trajectory on the
+1. ``nominal_planning.png`` - the A* path and the refined trajectory on the
    execution prior map, with the clearance profile. Regenerated from the SDF.
-3. ``srr_geometry.png`` - the Stop-Replan-Resume detour, sensed obstacle and
+2. ``srr_geometry.png`` - the Stop-Replan-Resume detour, sensed obstacle and
    rejoin, reproduced offline from the published result bundle.
 
-Figures 2 and 3 are derived from the same computations the reproduction tools
-run, so a figure can never drift away from the published numbers without those
-tools failing first.
+Both are derived from the same computations the reproduction tools run, so a
+figure can never drift away from the published numbers without those tools
+failing first.
+
+The architecture overview, ``architecture.png``, is drawn, not computed. Its
+source is ``docs/figures/architecture.drawio``; edit it in draw.io and export
+with draw.io Desktop::
+
+    draw.io -x -f png -s 2 -b 10 -o docs/figures/architecture.png \
+        docs/figures/architecture.drawio
 
 Usage::
 
@@ -37,7 +43,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch  # noqa: E402
+from matplotlib.patches import Circle  # noqa: E402
 from PIL import Image  # noqa: E402
 
 from uav_autonomy import grid as G  # noqa: E402
@@ -87,185 +93,8 @@ def build_execution_prior():
     return geom, image, map_data, meta
 
 
+
 # ---------------------------------------------------------------- figure 1
-
-def figure_architecture(path: Path) -> None:
-    """System data flow.
-
-    Three lanes, matching how the system actually runs:
-
-      offline / pre-mission : world -> map -> A* -> B-spline ->
-                              mission reference -> frame transform,
-                              with LoS reduction as a diagnostic side branch
-                              off A* (the B-spline is fitted to the A* path)
-      online execution      : mission reference -> Offboard executor -> PX4 SITL
-      obstacle response     : LiDAR -> detection -> stop/hover -> local ROI
-                              replan -> resume anchor + rejoin -> executor
-
-    Deliberate correctness constraints, because the obvious "boxes and arrows"
-    layout gets all four of these wrong:
-      * A* never reaches PX4 directly; it feeds refinement, then the reference.
-      * The frame transform converts the reference; it does not replan.
-      * LiDAR reaches the executor only through the obstacle-response chain.
-      * The local replan rejoins the mission reference; it does not bypass it.
-      * LoS reduction does not feed the B-spline, and the multi-POI mission
-        reference is a published input: its stitcher is not in this release.
-    """
-    fig, ax = plt.subplots(figsize=(13.6, 9.4))
-    ax.set_xlim(0, 136)
-    ax.set_ylim(0, 96)
-    ax.axis("off")
-
-    def box(x, y, w, h, title, sub, ec, ls="-", tfs=9.4):
-        ax.add_patch(FancyBboxPatch((x, y), w, h,
-                                    boxstyle="round,pad=0.45,rounding_size=1.1",
-                                    fc="#ffffff", ec=ec, lw=1.5, ls=ls, zorder=3))
-        ax.text(x + w / 2, y + h * 0.62, title, ha="center", va="center",
-                fontsize=tfs, fontweight="bold", color=INK, zorder=4)
-        ax.text(x + w / 2, y + h * 0.25, sub, ha="center", va="center",
-                fontsize=7.2, color=MUTED, zorder=4)
-        return (x, y, w, h)
-
-    def arrow(p1, p2, color=MUTED, rad=0.0, lw=1.4):
-        ax.add_patch(FancyArrowPatch(p1, p2, arrowstyle="-|>", mutation_scale=12,
-                                     lw=lw, color=color, shrinkA=3, shrinkB=3,
-                                     connectionstyle=f"arc3,rad={rad}", zorder=2))
-
-    def note(x, y, text, color):
-        ax.text(x, y, text, fontsize=7.3, color=color, ha="center", va="center",
-                zorder=6, bbox=dict(fc="white", ec="none", pad=1.4))
-
-    def R(b): return (b[0] + b[2], b[1] + b[3] / 2)
-    def L(b): return (b[0], b[1] + b[3] / 2)
-    def T(b): return (b[0] + b[2] / 2, b[1] + b[3])
-    def B(b): return (b[0] + b[2] / 2, b[1])
-
-    # ---- lane backgrounds -------------------------------------------------
-    ax.add_patch(plt.Rectangle((0.5, 56.0), 135, 39.0, fc="#f0fdf4",
-                               ec="#bbf7d0", lw=1.2, zorder=0))
-    ax.add_patch(plt.Rectangle((0.5, 31.0), 135, 21.0, fc="#fff7ed",
-                               ec="#fed7aa", lw=1.2, zorder=0))
-    ax.add_patch(plt.Rectangle((0.5, 1.5), 135, 25.5, fc="#eff6ff",
-                               ec="#bfdbfe", lw=1.2, zorder=0))
-    ax.text(2.2, 92.2, "OFFLINE / PRE-MISSION    deterministic, no simulator",
-            fontsize=9.4, fontweight="bold", color=GREEN, zorder=5)
-    ax.text(2.2, 49.0, "ONLINE EXECUTION    controlled PX4 SITL / Gazebo run",
-            fontsize=9.4, fontweight="bold", color=ACCENT, zorder=5)
-    ax.text(2.2, 24.2, "OBSTACLE RESPONSE    Stop-Replan-Resume (SRR)",
-            fontsize=9.4, fontweight="bold", color=BLUE, zorder=5)
-
-    # ---- offline lane: two rows so nothing is cramped ---------------------
-    h = 12.5
-    r1, r2 = 74.5, 58.5
-    b_world = box(4.0, r1, 26.0, h, "Gazebo world", "sim/worlds/forest_map2.sdf", GREEN)
-    b_map   = box(36.0, r1, 26.0, h, "occupancy map", "SDF rasterisation", GREEN)
-    b_astar = box(68.0, r1, 26.0, h, "A* planning", "octile, no corner cutting", GREEN)
-    b_los   = box(100.0, r1, 30.0, h, "line-of-sight reduction",
-                  "string pulling \u00b7 diagnostic only", GREEN)
-    for a, b in ((b_world, b_map), (b_map, b_astar), (b_astar, b_los)):
-        arrow(R(a), L(b), GREEN)
-
-    b_bspl = box(36.0, r2, 30.0, h, "B-spline refinement",
-                 "clearance-validated cascade", GREEN)
-    b_ref  = box(72.0, r2, 26.0, h, "mission reference",
-                 "published input \u00b7 stitcher not released", GREEN, tfs=9.0)
-    b_tf   = box(104.0, r2, 26.0, h, "frame transform", "ENU \u2192 NED", GREEN)
-    # Wrap from row 1 to row 2. The B-spline is fitted to the A* path; the
-    # LoS branch above is diagnostic and feeds nothing downstream.
-    arrow((b_astar[0] + 5.0, b_astar[1]),
-          (b_bspl[0] + b_bspl[2] - 6.0, b_bspl[1] + b_bspl[3]), GREEN)
-    arrow(R(b_bspl), L(b_ref), GREEN)
-    arrow(R(b_ref), L(b_tf), GREEN)
-
-    # ---- online lane ------------------------------------------------------
-    ye, he = 33.5, 13.5
-    b_exec = box(40.0, ye, 34.0, he, "Offboard mission executor",
-                 "20 Hz setpoints \u00b7 safety state machine", ACCENT)
-    b_px4  = box(88.0, ye, 30.0, he, "PX4 SITL + Gazebo",
-                 "uXRCE-DDS \u00b7 EKF2 \u00b7 physics", ACCENT)
-    _tf_x = b_tf[0] + b_tf[2] * 0.5
-    _ex_x = b_exec[0] + b_exec[2] * 0.78
-    arrow((b_exec[0] + b_exec[2], ye + he * 0.66),
-          (b_px4[0], ye + he * 0.66), ACCENT)
-    note(81.0, ye + he * 0.66 + 2.5, "TrajectorySetpoint", ACCENT)
-    arrow((b_px4[0], ye + he * 0.30),
-          (b_exec[0] + b_exec[2], ye + he * 0.30), ACCENT)
-    note(81.0, ye + he * 0.30 - 2.6, "status \u00b7 local position", ACCENT)
-
-    # Mission reference, transformed to NED, feeds the executor.
-    def _route_pre(points, color, lw=1.4):
-        ax.plot([q[0] for q in points], [q[1] for q in points], color=color,
-                lw=lw, zorder=2, solid_capstyle="round")
-        ax.add_patch(FancyArrowPatch(points[-2], points[-1], arrowstyle="-|>",
-                                     mutation_scale=12, lw=lw, color=color,
-                                     shrinkA=0, shrinkB=2, zorder=2))
-    _route_pre([(_tf_x, b_tf[1]), (_tf_x, 54.0), (_ex_x, 54.0), (_ex_x, ye + he)],
-               ACCENT)
-    note(96.0, 54.0, "NED setpoint stream", ACCENT)
-
-    # ---- obstacle-response lane ------------------------------------------
-    yr, hr = 5.0, 13.5
-    b_lidar  = box(3.0, yr, 20.0, hr, "2D LiDAR", "/scan_filtered", MUTED,
-                   ls="--", tfs=9.0)
-    b_det    = box(26.0, yr, 24.0, hr, "obstacle detection",
-                   "clustering + prior novelty", BLUE, tfs=9.0)
-    b_stop   = box(53.0, yr, 20.0, hr, "stop and hover", "stability gate", BLUE, tfs=9.0)
-    b_replan = box(76.0, yr, 24.0, hr, "local ROI replan",
-                   "crop \u00b7 patch \u00b7 A* \u00b7 refine", BLUE, tfs=9.0)
-    b_join   = box(103.0, yr, 29.0, hr, "resume anchor + rejoin",
-                   "reintegrate mission reference", BLUE, tfs=9.0)
-    for a, b in ((b_lidar, b_det), (b_det, b_stop), (b_stop, b_replan),
-                 (b_replan, b_join)):
-        arrow(R(a), L(b), BLUE)
-
-    # ---- long-haul connections -------------------------------------------
-    # arc3 curves are unmanageable over these spans and land on the wrong box,
-    # so route them explicitly as orthogonal polylines with a single arrowhead.
-    def route(points, color, lw=1.4, ls="-"):
-        xs = [q[0] for q in points]
-        ys = [q[1] for q in points]
-        ax.plot(xs, ys, color=color, lw=lw, ls=ls, zorder=2,
-                solid_capstyle="round")
-        ax.add_patch(FancyArrowPatch(points[-2], points[-1], arrowstyle="-|>",
-                                     mutation_scale=12, lw=lw, color=color,
-                                     shrinkA=0, shrinkB=2, zorder=2))
-
-    # PX4 produces the simulated LiDAR scan: down the far right, along the
-    # bottom gutter, into the LiDAR box from below.
-    route([(b_px4[0] + b_px4[2] - 3.0, b_px4[1]),
-           (b_px4[0] + b_px4[2] - 3.0, 29.2),
-           (b_lidar[0] + b_lidar[2] * 0.5, 29.2),
-           (b_lidar[0] + b_lidar[2] * 0.5, yr + hr)], MUTED, ls="--")
-    note(72.0, 29.2, "simulated scan", MUTED)
-
-    # The unpatched prior map is what the local replanner searches: down the
-    # far left, then right into the replan box.
-    # Leave from the map's left edge and use the clear gutter at x = 32.5, so
-    # the line does not cross the B-spline box sitting directly below the map.
-    route([(b_map[0], b_map[1] + b_map[3] * 0.5),
-           (32.5, b_map[1] + b_map[3] * 0.5),
-           (32.5, 21.0),
-           (b_replan[0] + b_replan[2] * 0.5, 21.0),
-           (b_replan[0] + b_replan[2] * 0.5, yr + hr)], GREEN)
-    note(57.0, 21.0, "unpatched prior map", GREEN)
-
-    # The response chain returns to the executor: up the right edge of the
-    # rejoin box, then left into the executor from below.
-    route([(b_join[0] + b_join[2] * 0.5, yr + hr),
-           (b_join[0] + b_join[2] * 0.5, 25.0),
-           (b_exec[0] + b_exec[2] * 0.35, 25.0),
-           (b_exec[0] + b_exec[2] * 0.35, ye)], BLUE)
-    note(96.0, 25.0, "stitched reference \u2192 executor", BLUE)
-
-    ax.text(135.0, 0.2,
-            "green: src/uav_autonomy (offline)    orange: ros2/nodes (online)"
-            "    blue: Stop-Replan-Resume path",
-            ha="right", fontsize=7.6, color=MUTED)
-    fig.savefig(path, **SAVE)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------- figure 2
 
 def figure_nominal(path: Path) -> None:
     """A* path and refined trajectory, regenerated from the SDF."""
@@ -345,7 +174,7 @@ def figure_nominal(path: Path) -> None:
     return tr
 
 
-# ---------------------------------------------------------------- figure 3
+# ---------------------------------------------------------------- figure 2
 
 def figure_srr(path: Path) -> None:
     """Stop-Replan-Resume detour, reproduced offline from public data."""
@@ -426,13 +255,11 @@ def main() -> int:
     args = ap.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("1/3 architecture ...")
-    figure_architecture(args.output_dir / "architecture.png")
-    print("2/3 nominal planning (regenerating map + plan + trajectory) ...")
+    print("1/2 nominal planning (regenerating map + plan + trajectory) ...")
     tr = figure_nominal(args.output_dir / "nominal_planning.png")
     print(f"    trajectory {tr.trajectory_length_m:.6f} m, "
           f"clearance {tr.clearance_min_m:.6f} m, {tr.classification}")
-    print("3/3 stop-replan-resume geometry ...")
+    print("2/2 stop-replan-resume geometry ...")
     c = figure_srr(args.output_dir / "srr_geometry.png")
     print(f"    detour {c.smoothed_length_m:.6f} m, "
           f"clearance {c.clearance_min_m:.6f} m, {c.classification}")

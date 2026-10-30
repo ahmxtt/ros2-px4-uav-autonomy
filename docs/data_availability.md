@@ -170,6 +170,6 @@ pip install -e ".[test]"
 pytest                                                    # invariants + regression
 python3 tools/reproduce_offline_demo.py  --output-dir /tmp/demo
 python3 tools/reproduce_srr_geometry.py  --output-dir /tmp/srr
-python3 tools/make_docs_figures.py                        # the three doc figures
+python3 tools/make_docs_figures.py                        # the two computed doc figures
 for d in results/*/; do (cd "$d" && sha256sum -c hashes.txt); done
 ```
