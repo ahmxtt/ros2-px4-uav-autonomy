@@ -163,16 +163,22 @@ Data: [`results/planning/metrics.yaml`](../results/planning/metrics.yaml),
 
 ### Line-of-sight reduction
 
-Applied to the same path on the same inflated grid by
-`tools/reduce_path_los.py`, which reads `robot_radius` from
-`sim/config/robot_map2_safe.yaml`: **1543 → 8 waypoints**, all four invariants
-hold (endpoints preserved, full-segment line of sight, length monotone,
-clearance floor respected).
+Applied to the same path on the grid inflated at the radius the path was
+planned with, `r_plan_min` = 1.10 m: **1543 → 8 waypoints**, length
+102.139 m → 98.561 m, all four invariants hold (endpoints preserved,
+full-segment line of sight, length monotone, clearance floor respected).
+`tools/reproduce_offline_demo.py` computes this as its step 3 and writes the
+reduced list to `02_plan/path_reduced.csv`; `tools/reduce_path_los.py` gives the
+same result with `--inflation-radius-m 1.10`. Run with its default radius
+(`robot_radius` = 0.65 m, which is not the radius this path was planned with),
+the same tool returns 1543 → 5 waypoints with a 0.652 m clearance minimum.
 
-This figure is attributed to the tool. The reduced waypoint list is not one of
+**The reduction is a separate, diagnostic stage. It is not the input to the
+B-spline refinement below**, which is fitted to the full A\* path
+(`tools/reproduce_offline_demo.py`, `tools/refine_trajectory.py`), and it is not
+part of the flown mission reference. The reduced waypoint list is not one of
 the published files: `results/planning/` ships the A\* path and the refined
-trajectory, and no result file in this repository records the 1543 → 8
-reduction.
+trajectory, and no published result file records the 1543 → 8 reduction.
 
 This reduction is reported for the leg above. Do not transfer the ratio to a
 different map: the input point count depends on the grid and the path.
@@ -345,6 +351,15 @@ verdict PASS.
 | Max curvature | 0.734 1/m |
 | Max lateral acceleration | 1.000 m/s² |
 | Collision-free | yes |
+
+**Scope of the runtime figure.** 0.251 s is `t_total_s` in
+`replan_runtime_metrics.yaml`: crop, patch, clearance field, inflation, A\*,
+smoothing and validation. It excludes loading the mission segment and the prior
+map, which happen before it. The `started_wall_s` → `completed_wall_s` span in
+the same file, which includes that loading, is **0.322 s**. In the released
+code the replan runs synchronously inside the control tick, so the setpoint
+stream does not tick during it; see
+[limitations.md](limitations.md#known-runtime-defects-documented-not-fixed).
 
 **`boundary_smoothed` is a real qualification, not a formality.** The detour
 clears `r_eff` = 0.65 m but not `r_pref` = 0.90 m. It is collision-free with

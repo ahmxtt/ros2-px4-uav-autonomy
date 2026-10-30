@@ -9,7 +9,7 @@ additionally runs the flight stack and is required only to re-fly a mission.
 ## Offline (recommended first)
 
 ```bash
-git clone <this repository>
+git clone https://github.com/ahmxtt/ros2-px4-uav-autonomy.git
 cd ros2-px4-uav-autonomy
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .

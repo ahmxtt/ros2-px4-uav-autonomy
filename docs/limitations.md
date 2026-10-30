@@ -94,7 +94,9 @@ from another source.
 thesis evidence in `results/nominal_mission/` and `results/stop_replan_resume/`
 comes from the private development tree. When the code in *this* repository was
 pointed at a live stack, ten armed attempts were made and none reached the end
-of the mission. The best of them reached, in order, `WAIT_STATUS`, `WAIT_LPOS`,
+of the mission. Only the furthest-progressing attempt is published as an
+artifact; the attempt count itself is the author's record and is not backed by
+a published file. The best of them reached, in order, `WAIT_STATUS`, `WAIT_LPOS`,
 `WAIT_EKF_READY`, `PRE_STREAM`, `DECIDE_ARM`, `WAIT_OFFBOARD`, `WAIT_ARMED`,
 `SETTLE_HOLD`. It armed, entered OFFBOARD and held the settle setpoint to a
 lateral error of max 0.060 m and mean 0.034 m over 107 samples while climbing
@@ -156,12 +158,50 @@ margin than the nominal plan, and that difference is a property of the local
 geometry, not a general result.
 
 **Reproducibility is asymmetric.** The offline chain is deterministic by
-construction and verified byte-identical in this release, and the
-Stop–Replan–Resume replan *geometry* reproduces exactly with it. SITL
+construction. In this release the A\* cell path and the integer counters are
+verified exactly, the rasterised grid is byte-identical between rebuilds, and
+the refined trajectory and the Stop–Replan–Resume detour geometry reproduce
+within documented floating-point tolerances (1e-9 on the published metrics,
+1e-6 m on the SRR refined path). SITL
 execution is not deterministic and is not claimed to be, so the timing and
 tracking figures of a flown run cannot be reproduced. See
 [reproducibility.md](reproducibility.md) and
 [data_availability.md](data_availability.md).
+
+## Known runtime defects, documented, not fixed
+
+A static review of `ros2/nodes/` for this release found the following. None of
+them is fixed here: each change touches the flight state machine that produced
+the canonical evidence, and none can be verified without a ROS 2 / PX4 SITL
+stack. They are recorded so that a reader does not infer a stronger safety
+behaviour than the code has.
+
+- **Land is sent once and the force-disarm fallback is time-based.**
+  `_send_land()` publishes `VEHICLE_CMD_NAV_LAND` a single time on a
+  best-effort QoS, and no `vehicle_command_ack` or land-detected topic is
+  read. `ABORT_LANDING` sends force-disarm after 15 s and `WAIT_DISARM` after
+  30 s without checking that the vehicle is on the ground. A lost Land command
+  could therefore end in a force-disarm in the air. The recorded public abort
+  did not exercise this: land and disarm were both observed.
+- **The local replan blocks the 20 Hz setpoint stream.** It runs synchronously
+  inside the control tick of a single-threaded executor, and the file I/O it
+  performs is not counted in the reported replan runtime. The online 0.251 s
+  replan stayed well under PX4's offboard-loss timeout, but the configured
+  replan budget (`--replan-timeout-s` 3.0 s) is longer than that timeout, so a
+  replan between roughly 1 s and 3 s would be accepted by the node while PX4
+  had already left OFFBOARD.
+- **The SRR-specific states skip the parent's watchdogs.** `STOP_HOVER`,
+  `REPLAN_LOCAL_ROI` and `RESUME_REPLAN_REFERENCE` return before the parent
+  control tick, so `--max-run-s` is not checked there and the resume state has
+  no status-staleness check. Each of these states is bounded by its own timeout
+  or by the length of the replanned reference.
+- **An exception outside the replan body ends the node without commanding
+  Land**, leaving the vehicle to PX4's offboard-loss failsafe.
+- **`--max-altitude-m` is not clamped to the 3.5 m hard cap** its help text
+  describes, and the SRR settle cap is derived from the unclamped takeoff
+  altitude. The defaults are within the cap.
+- **Watchdogs measure message arrival, not data age.** They use the wall-clock
+  receipt time; PX4 message timestamps are not compared.
 
 ## Not certified
 

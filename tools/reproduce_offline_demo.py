@@ -6,8 +6,9 @@ Runs the canonical offline chain with no ROS, no PX4 and no Gazebo::
     SDF world
       -> occupancy grid          (uav_autonomy.mapping)
       -> deterministic A* path   (uav_autonomy.planning)
-      -> line-of-sight reduction (uav_autonomy.smoothing)
-      -> B-spline + speed profile(uav_autonomy.trajectory)
+           |-> line-of-sight reduction (uav_autonomy.smoothing)
+           |     diagnostic side branch; its output is not used below
+      -> B-spline + speed profile(uav_autonomy.trajectory), fitted to the A* path
       -> motion-limit validation (uav_autonomy.trajectory)
 
 Usage::

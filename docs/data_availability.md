@@ -21,8 +21,11 @@ and what is curated evidence, is stated per bundle below.
 
 **A. Deterministic offline computations on the Gazebo world.** Map generation,
 global planning, line-of-sight reduction, B-spline refinement and the offline
-motion-feasibility evaluation. These contain no randomness and regenerate
-exactly from the public repository.
+motion-feasibility evaluation. These contain no randomness. The occupancy
+grid, the A* cell path and the integer counters regenerate exactly from the
+public repository; the B-spline geometry and the derived floating-point metrics
+regenerate within the tolerances documented in
+[reproducibility.md](reproducibility.md#tolerances-and-why-they-differ).
 
 **B. Controlled PX4 SITL / Gazebo execution runs.** Nominal mission tracking,
 ground-truth versus PX4 local-position consistency, and the online
@@ -52,9 +55,12 @@ neither replaces nor updates class B.
 | `trajectory.csv` | the refined trajectory, 5108 samples, with clearance, curvature, speed |
 | `control_points.csv` | the 53 spline control points |
 
-Regenerate with `tools/reproduce_offline_demo.py`. The occupancy grid rebuilds
-**byte-identically** from `sim/worlds/forest_map2.sdf`, and the A* path
-regenerates **cell for cell**. Verified in CI.
+Regenerate with `tools/reproduce_offline_demo.py`, which compares five scalar
+metrics against the published values. The occupancy grid rebuilds
+deterministically from `sim/worlds/forest_map2.sdf` (byte-identity is asserted
+between two rebuilds; no grid is published to compare against), and the A* path
+regenerates **cell for cell**, asserted in
+`tests/test_regression_published_result.py`. Both run in CI.
 
 ### `results/stop_replan_resume/` — mixed
 
@@ -80,13 +86,14 @@ refined path matches to the six decimals the CSV stores.
 online replanning runtime, tracking error and mission outcome. Those are
 properties of a flown run.
 
-**Not re-flyable from this release either.** `tools/build_srr_inputs.py` builds
-every input the SRR node needs, but the resulting setpoint stream starts about
-15 m into the mission because the published window begins there. That is enough
-for a dry run against a live PX4 SITL stack, and it is enough for the offline
-geometry reproduction, but an armed run from the spawn point is refused by the
-executor's settle guard. Re-flying the armed mission requires the complete
-multi-POI mission reference, which is retained in the private archive.
+**Inputs for a re-flight are published; a completed public re-flight is not.**
+`tools/build_srr_inputs.py` assembles every input the SRR node needs from public
+files, including the complete multi-POI mission reference from
+`results/mission_reference/` and the NED setpoint stream derived from it, which
+starts at the vehicle spawn point. An armed perception-driven run was attempted
+with these inputs and did not reach `MISSION`; see
+[`results/public_runtime_validation/`](../results/public_runtime_validation/README.md).
+No armed run of the public code has completed the mission.
 
 ### `results/nominal_mission/` — class B, curated summaries
 
@@ -126,13 +133,15 @@ from `hashes.txt`, so a correct regeneration still verifies.
 
 - Full per-tick logs of every live run.
 - Ground-truth and PX4 local-position time series (~8 MB per run).
-- The complete multi-POI mission reference (16 157 samples) and the derived
-  NED setpoint stream.
 - The full occupancy grids as stored PGMs, superseded here by regeneration.
 - Development runs preceding the published ones. These were iterative runs
   under changing software and configuration, not repeated trials under a fixed
   protocol, so they cannot be pooled into a success rate and none is reported.
 - Intermediate gate bundles (see [validation_gates.md](validation_gates.md)).
+
+The complete multi-POI mission reference is **not** on this list: it is
+published in `results/mission_reference/`, and the NED setpoint stream
+regenerates from it byte for byte.
 
 Available on reasonable request for academic review.
 

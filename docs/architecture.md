@@ -134,7 +134,9 @@ clearance — see the refinement cascade below.
 
 Greedy string pulling on the same inflated grid the planner used, so any
 waypoint it accepts is by construction acceptable to the planner. Output is
-still a polyline. Four invariants are checked and a violation is an error, not
+still a polyline. It is a **separate, diagnostic stage**: the B-spline
+refinement below is fitted to the full A\* path, not to the reduced polyline,
+and the published trajectory does not depend on it. Four invariants are checked and a violation is an error, not
 a warning: endpoint preservation, full-segment line of sight, length
 monotonicity, and the clearance floor.
 
@@ -225,7 +227,7 @@ REJOIN_ORIGINAL_MISSION → OBSERVE_END`). Detection runs on `/scan_filtered`
 within a corridor ahead of the vehicle, requires a hysteresis streak, and
 tests novelty against the prior map. The detection callback returns
 immediately unless the state is `MISSION`
-(`stop_replan_resume_node.py:521-522`), and `MISSION` is entered only from
+(`stop_replan_resume_node.py:528-529`), and `MISSION` is entered only from
 `SETTLE_HOLD`, which follows a confirmed arm.
 
 Two variants exist so that mechanism and perception are falsifiable
@@ -240,7 +242,7 @@ Gate 6D-B.
 ### Two monolithic nodes, deliberately
 
 `offboard_mission_executor.py` is 2943 lines and `stop_replan_resume_node.py`
-is 2061 lines. These are large modules by any normal standard, and no attempt
+is 2081 lines. These are large modules by any normal standard, and no attempt
 is made here to present that as a design virtue.
 
 Release 0.1 keeps them as they are because they are the runtime state machines

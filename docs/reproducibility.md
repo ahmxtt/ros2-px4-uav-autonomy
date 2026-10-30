@@ -4,8 +4,8 @@ Reproducibility here is **asymmetric**, and the split is the point.
 
 | Layer | Class | Status |
 |---|---|---|
-| Map generation → A\* → LoS reduction → B-spline | offline | **Deterministic by construction, verified in this release** |
-| Stop–Replan–Resume *geometry* | offline | **Deterministic, reproduces the published detour exactly** |
+| Map generation → A\* → B-spline (LoS reduction as a side branch on the A\* path) | offline | **Deterministic by construction, verified in this release** |
+| Stop–Replan–Resume *geometry* | offline | **Deterministic; A\* exactly, refined detour to 1e-6 m** |
 | World-frame reference → PX4 NED setpoint stream | offline | **Byte-identical to the canonical run input** |
 | PX4 SITL execution (tracking, timing, mission outcome) | SITL | **Not deterministic, not claimed to be** |
 
@@ -17,8 +17,8 @@ overstate what this repository shows.
 ## What is verified
 
 The offline chain contains no RNG. Grid rasterisation, grid A\*, Bresenham
-string pulling and fixed-knot cubic B-spline interpolation are all
-deterministic algorithms, and the A\* tie-break is total, so the expansion
+string pulling and cubic B-spline interpolation through arc-length-resampled
+control points are all deterministic algorithms, and the A\* tie-break is total, so the expansion
 order — and therefore the returned path — is unique.
 
 That is the argument. This release also checks it:
@@ -258,8 +258,8 @@ They were verified locally against a live PX4 SITL stack:
 | Output-schema compatibility with the published run | the release code emits the same 20 verdict conditions, under the same keys, as `results/stop_replan_resume/verdict.yaml` |
 
 **What a dry run covers, exactly.** A dry run is any run without *both*
-`--arm` and `--i-have-physical-eyes-on-the-sim`. It reaches 6 of the executor's
-13 states (`WAIT_STATUS`, `WAIT_LPOS`, `WAIT_EKF_READY`, `PRE_STREAM`,
+`--arm` and `--i-have-physical-eyes-on-the-sim`. It reaches at most 6 of the
+executor's 13 states (fewer if it aborts early) (`WAIT_STATUS`, `WAIT_LPOS`, `WAIT_EKF_READY`, `PRE_STREAM`,
 `DECIDE_ARM`, `DONE`) and stops at
 `ros2/nodes/offboard_mission_executor.py:1373-1384`. It does publish
 `OffboardControlMode` and a hold `TrajectorySetpoint` for about
@@ -272,7 +272,7 @@ two-factor arm gate and output initialisation. **It does not execute obstacle
 detection, stop, local replanning, resume or rejoin**, because these states are
 reached only during an armed mission: the SRR handler returns immediately
 unless the node is in `MISSION`
-(`ros2/nodes/stop_replan_resume_node.py:521-522`), and `MISSION` is entered
+(`ros2/nodes/stop_replan_resume_node.py:528-529`), and `MISSION` is entered
 only from `SETTLE_HOLD`, which follows a confirmed arm.
 
 **Armed flight.** The armed nominal mission was not re-flown for this release;

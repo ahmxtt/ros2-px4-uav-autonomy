@@ -53,8 +53,8 @@ replanning, resume or rejoin, because these states are reached only during an
 armed mission.
 
 Concretely: a dry run is any run without **both** `--arm` and
-`--i-have-physical-eyes-on-the-sim`. It reaches exactly 6 of the parent node's
-13 states,
+`--i-have-physical-eyes-on-the-sim`. It reaches at most 6 of the parent node's
+13 states (fewer if it aborts early),
 
 ```
 WAIT_STATUS → WAIT_LPOS → WAIT_EKF_READY → PRE_STREAM → DECIDE_ARM → DONE
@@ -69,7 +69,7 @@ publisher is advertised and never used.
 For `stop_replan_resume_node`, obstacle detection, `STOP_HOVER`, replan, resume
 and rejoin are all unreachable in a dry run. The detection callback begins with
 `if self._state != "MISSION": return`
-(`stop_replan_resume_node.py:521-522`), and `MISSION` is entered only from
+(`stop_replan_resume_node.py:528-529`), and `MISSION` is entered only from
 `SETTLE_HOLD`, which is entered only after a confirmed arm. Any statement that
 the dry run exercises the full state machine, or the perception path, is false.
 
@@ -108,14 +108,20 @@ While armed, the executor monitors on every tick:
 | Rolling tracking-error window exceeded | abort, controlled land |
 | Absolute altitude cap exceeded | abort, controlled land |
 | PX4 failsafe flag raised | recorded, abort path |
-| Arming state changed unexpectedly | recorded, abort path |
+| Arming state changed unexpectedly | recorded in the run report only; **no abort is triggered by it** |
 
-An abort holds the vehicle's current position as the setpoint rather than
-continuing along the reference, then commands land.
+An abort stops advancing along the reference: the stream keeps publishing the
+last mission setpoint (or the hold setpoint, if the abort fires before
+`MISSION`), and Land is commanded. The setpoint is the last *reference* point,
+not a re-sampled vehicle position.
 
 **The disarm path, as configured and as observed.** The configured sequence is:
-send Land, enter `WAIT_DISARM`, and if no disarm is observed within 30 s of the
-Land command, send the force-disarm fallback. That is the configuration; it is
+send Land, then wait for disarm. On the normal end-of-mission path
+(`WAIT_DISARM`) the force-disarm fallback is sent if no disarm is observed
+within 30 s; on the abort path (`ABORT_LANDING`) the timeout is
+`ABORT_DISARM_TIMEOUT_S` = 15 s. Land is published once, and the fallback is
+time-based: it does not check a landed state (see
+[limitations.md](limitations.md#known-runtime-defects-documented-not-fixed)). That is the configuration; it is
 not a statement about how often the fallback fires. In the best armed attempt
 recorded for this release, the abort path ran to completion: land and disarm
 were both observed and **no force-disarm was sent**
