@@ -18,12 +18,18 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.10 is the floor declared in pyproject.toml; 3.12 is the
+        # environment of record (docs/installation.md).
+        python-version: ["3.10", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Install the package and test extra

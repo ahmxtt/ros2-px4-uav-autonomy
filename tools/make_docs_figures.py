@@ -94,8 +94,10 @@ def figure_architecture(path: Path) -> None:
 
     Three lanes, matching how the system actually runs:
 
-      offline / pre-mission : world -> map -> A* -> LoS -> B-spline ->
-                              mission reference -> frame transform
+      offline / pre-mission : world -> map -> A* -> B-spline ->
+                              mission reference -> frame transform,
+                              with LoS reduction as a diagnostic side branch
+                              off A* (the B-spline is fitted to the A* path)
       online execution      : mission reference -> Offboard executor -> PX4 SITL
       obstacle response     : LiDAR -> detection -> stop/hover -> local ROI
                               replan -> resume anchor + rejoin -> executor
@@ -106,6 +108,8 @@ def figure_architecture(path: Path) -> None:
       * The frame transform converts the reference; it does not replan.
       * LiDAR reaches the executor only through the obstacle-response chain.
       * The local replan rejoins the mission reference; it does not bypass it.
+      * LoS reduction does not feed the B-spline, and the multi-POI mission
+        reference is a published input: its stitcher is not in this release.
     """
     fig, ax = plt.subplots(figsize=(13.6, 9.4))
     ax.set_xlim(0, 136)
@@ -156,16 +160,20 @@ def figure_architecture(path: Path) -> None:
     b_world = box(4.0, r1, 26.0, h, "Gazebo world", "sim/worlds/forest_map2.sdf", GREEN)
     b_map   = box(36.0, r1, 26.0, h, "occupancy map", "SDF rasterisation", GREEN)
     b_astar = box(68.0, r1, 26.0, h, "A* planning", "octile, no corner cutting", GREEN)
-    b_los   = box(100.0, r1, 30.0, h, "line-of-sight reduction", "string pulling", GREEN)
+    b_los   = box(100.0, r1, 30.0, h, "line-of-sight reduction",
+                  "string pulling \u00b7 diagnostic only", GREEN)
     for a, b in ((b_world, b_map), (b_map, b_astar), (b_astar, b_los)):
         arrow(R(a), L(b), GREEN)
 
     b_bspl = box(36.0, r2, 30.0, h, "B-spline refinement",
                  "clearance-validated cascade", GREEN)
-    b_ref  = box(72.0, r2, 26.0, h, "mission reference", "world ENU + v_ref", GREEN)
+    b_ref  = box(72.0, r2, 26.0, h, "mission reference",
+                 "published input \u00b7 stitcher not released", GREEN, tfs=9.0)
     b_tf   = box(104.0, r2, 26.0, h, "frame transform", "ENU \u2192 NED", GREEN)
-    # Wrap from row 1 to row 2.
-    arrow(B(b_los), T(b_bspl), GREEN, rad=0.18)
+    # Wrap from row 1 to row 2. The B-spline is fitted to the A* path; the
+    # LoS branch above is diagnostic and feeds nothing downstream.
+    arrow((b_astar[0] + 5.0, b_astar[1]),
+          (b_bspl[0] + b_bspl[2] - 6.0, b_bspl[1] + b_bspl[3]), GREEN)
     arrow(R(b_bspl), L(b_ref), GREEN)
     arrow(R(b_ref), L(b_tf), GREEN)
 

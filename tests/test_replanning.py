@@ -426,3 +426,19 @@ def test_published_srr_is_boundary_not_robust(reproduced_srr):
     assert c.clearance_min_m >= R.R_EFF_M
     assert c.clearance_min_m < R.R_PREF_M
     assert c.classification == "boundary_smoothed"
+
+
+# ----------------------------------------------- policy mirror (no YAML at run time)
+
+def test_replanner_constants_mirror_the_planning_configs():
+    """replanning.py hard-codes the policy because the runtime replanner reads
+    no YAML. sim/config/mission_policy.yaml says "if a value here changes,
+    change that module too"; this test is what enforces it."""
+    robot = yaml.safe_load((REPO / "sim/config/robot_map2_safe.yaml").read_text())
+    policy = yaml.safe_load(
+        (REPO / "sim/config/mission_policy.yaml").read_text())["planning_policy"]
+    assert R.R_EFF_M == pytest.approx(float(robot["robot_radius"]))
+    assert R.TRACKING_MARGIN_M == pytest.approx(float(policy["tracking_margin_m"]))
+    assert R.R_PREF_M == pytest.approx(
+        float(robot["robot_radius"]) + float(policy["tracking_margin_m"]))
+    assert R.W_CLEARANCE == pytest.approx(float(policy["w_clearance"]))

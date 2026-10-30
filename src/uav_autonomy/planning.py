@@ -21,8 +21,9 @@ shape the preference among already-safe cells.
     B-spline is allowed to consume, so the refined trajectory can still meet
     ``r_pref`` after the spline cuts corners.
 
-The mission policy computes both the robust and the boundary candidate and
-selects between them; see ``docs/architecture.md``.
+The mission policy describes computing both the robust and the boundary
+candidate and selecting between them; that wrapper is not part of this release
+(see ``sim/config/mission_policy.yaml``). Each tool here runs one candidate.
 
 Invariants shared by all three:
 
@@ -35,9 +36,23 @@ Invariants shared by all three:
   trailing ``(row, col)`` makes the pop order total, so repeated runs on
   identical input produce byte-identical paths.
 
-Admissibility: the octile heuristic never exceeds the true remaining cost. In
-both penalised variants the penalty is non-negative, so every penalised edge
-costs at least its geometric length and the same heuristic stays admissible.
+Heuristic bound: the octile distance to a single cell never exceeds the true
+remaining cost, and in both penalised variants the penalty is non-negative, so
+every penalised edge costs at least its geometric length and the penalties add
+no overestimate of their own. The goal-*region*
+heuristic (octile to the disc centre minus the disc radius, see
+:func:`octile_heuristic_cells`) is consistent but only approximately
+admissible: it can overestimate the cost to the nearest goal cell by at most
+``(sqrt(1 + OCTILE_DIAG**2) - 1) * radius`` cells, about 0.082 x radius. For
+the 6-cell goal discs used here that bound is 0.49 cells and the largest
+observed overestimate is 0.24 cells. The guarantee is on planning cost: the
+returned path's ``g`` (cell units, penalty included) exceeds the optimal
+planning cost by at most the bound, 0.49 cells. Only in the unpenalised
+:func:`a_star` is planning cost the geometric octile length, so only there
+does it bound the extra length (under 0.025 m at 0.05 m/cell). In the
+penalised variants it bounds the penalised cost, not geometric length.
+``tests/test_planning.py`` pins the bound. The heuristic is left as is because
+every published node count depends on it.
 """
 
 from __future__ import annotations
@@ -128,9 +143,13 @@ def octile_heuristic_cells(
 ) -> float:
     """Octile distance from ``cell`` to the *boundary* of the goal disc.
 
-    Subtracting the goal radius keeps the heuristic admissible for the
-    multi-target goal-region search: the true cost to the nearest goal cell is
-    never below ``octile_to_centre - radius``.
+    Subtracting the goal radius gives a consistent, approximately admissible
+    estimate for the multi-target goal-region search. It is not exact: a goal
+    cell at Euclidean distance ``<= radius`` from the centre can lie at
+    octile distance up to ``sqrt(1 + OCTILE_DIAG**2) * radius`` from it, so
+    the heuristic can overestimate by up to about ``0.082 * radius`` cells.
+    See the module
+    docstring for the consequence, which is bounded and small.
     """
     dr = abs(cell[0] - goal_centre[0])
     dc = abs(cell[1] - goal_centre[1])
@@ -142,7 +161,10 @@ def cell_penalty(clearance_m: float, r_eff: float, r_pref: float) -> float:
     """Soft clearance penalty in [0, 1] over the band ``[r_eff, r_pref)``.
 
     0 at or above ``r_pref``, 1 at or below ``r_eff``, quadratic in between.
-    Non-negative by construction, which preserves heuristic admissibility.
+    Non-negative by construction, so a penalised edge never costs less than
+    its geometric length. The heuristic therefore keeps the properties stated
+    in the module docstring: consistent, admissible towards a single cell, and
+    within the bounded goal-region overestimate towards the goal disc.
     """
     if clearance_m >= r_pref:
         return 0.0

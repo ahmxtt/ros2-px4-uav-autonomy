@@ -53,8 +53,8 @@ replanning, resume or rejoin, because these states are reached only during an
 armed mission.
 
 Concretely: a dry run is any run without **both** `--arm` and
-`--i-have-physical-eyes-on-the-sim`. It reaches exactly 6 of the parent node's
-13 states,
+`--i-have-physical-eyes-on-the-sim`. It reaches at most 6 of the parent node's
+13 states (fewer if it aborts early),
 
 ```
 WAIT_STATUS → WAIT_LPOS → WAIT_EKF_READY → PRE_STREAM → DECIDE_ARM → DONE
@@ -69,7 +69,7 @@ publisher is advertised and never used.
 For `stop_replan_resume_node`, obstacle detection, `STOP_HOVER`, replan, resume
 and rejoin are all unreachable in a dry run. The detection callback begins with
 `if self._state != "MISSION": return`
-(`stop_replan_resume_node.py:521-522`), and `MISSION` is entered only from
+(`stop_replan_resume_node.py:528-529`), and `MISSION` is entered only from
 `SETTLE_HOLD`, which is entered only after a confirmed arm. Any statement that
 the dry run exercises the full state machine, or the perception path, is false.
 
@@ -100,7 +100,8 @@ factor cost of a GUI.
 
 ## Continuous supervision, not end-of-run checking
 
-While armed, the executor monitors on every tick:
+While armed, the parent mission executor (`offboard_mission_executor.py`)
+monitors the following on every control tick of its own states:
 
 | Watch | Action on violation |
 |---|---|
@@ -108,14 +109,37 @@ While armed, the executor monitors on every tick:
 | Rolling tracking-error window exceeded | abort, controlled land |
 | Absolute altitude cap exceeded | abort, controlled land |
 | PX4 failsafe flag raised | recorded, abort path |
-| Arming state changed unexpectedly | recorded, abort path |
+| Arming state changed unexpectedly | recorded in the run report only; **no abort is triggered by it** |
 
-An abort holds the vehicle's current position as the setpoint rather than
-continuing along the reference, then commands land.
+**This does not hold uniformly in the Stop–Replan–Resume node.** Its own states
+(`DETECTED`, `STOP_HOVER`, `REPLAN_LOCAL_ROI`, `RESUME_REPLAN_REFERENCE`)
+return before the parent control tick and run their own, smaller set of checks
+(`stop_replan_resume_node.py`, `_control_tick` and the per-state handlers):
+
+| SRR state | Checks it runs | Parent checks it skips |
+|---|---|---|
+| `DETECTED` | none; it hands over to `STOP_HOVER` on the same tick | all |
+| `STOP_HOVER` | navigation state, failsafe flag, altitude cap, status and local-position staleness, hover timeout | tracking-error window, `--max-run-s` |
+| `REPLAN_LOCAL_ROI` | replan runtime budget and an exception guard around the replan body; the replan runs synchronously, so no tick, and no check, runs until it returns | all per-tick checks, `--max-run-s` |
+| `RESUME_REPLAN_REFERENCE` | navigation state, failsafe flag, altitude cap, local-position staleness, tracking-error window (on each published replan setpoint) | status staleness, `--max-run-s` |
+
+`REJOIN_ORIGINAL_MISSION` hands straight back to the parent's `MISSION` state,
+where the full table above applies again. These gaps are known runtime defects
+and are **not fixed** in this release; see
+[limitations.md](limitations.md#known-runtime-defects-documented-not-fixed).
+
+An abort stops advancing along the reference: the stream keeps publishing the
+last mission setpoint (or the hold setpoint, if the abort fires before
+`MISSION`), and Land is commanded. The setpoint is the last *reference* point,
+not a re-sampled vehicle position.
 
 **The disarm path, as configured and as observed.** The configured sequence is:
-send Land, enter `WAIT_DISARM`, and if no disarm is observed within 30 s of the
-Land command, send the force-disarm fallback. That is the configuration; it is
+send Land, then wait for disarm. On the normal end-of-mission path
+(`WAIT_DISARM`) the force-disarm fallback is sent if no disarm is observed
+within 30 s; on the abort path (`ABORT_LANDING`) the timeout is
+`ABORT_DISARM_TIMEOUT_S` = 15 s. Land is published once, and the fallback is
+time-based: it does not check a landed state (see
+[limitations.md](limitations.md#known-runtime-defects-documented-not-fixed)). That is the configuration; it is
 not a statement about how often the fallback fires. In the best armed attempt
 recorded for this release, the abort path ran to completion: land and disarm
 were both observed and **no force-disarm was sent**
