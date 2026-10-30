@@ -126,10 +126,16 @@ goal cell inside the Euclidean disc can be up to `sqrt(1 + OCTILE_DIAG²) · R`
 octile units from the centre, so the heuristic can overestimate the cost to
 the nearest goal cell by at most `(sqrt(1 + OCTILE_DIAG²) − 1) · R ≈ 0.082 · R`
 cells. For the 6-cell goal discs used here that bound is 0.49 cells (largest
-observed overestimate 0.24 cells), so a returned path can exceed the optimum
-by at most 0.49 cells, under 0.025 m at 0.05 m/cell. `tests/test_planning.py`
-pins the bound. The heuristic is left unchanged because every published node
-count depends on it.
+observed overestimate 0.24 cells). The guarantee is on **planning cost**: the
+returned path's cost `g` (cell units, penalty included) exceeds the optimal
+planning cost by at most 0.49 cells. Only for the unpenalised `a_star` variant
+is planning cost the geometric octile length, so there the path is at most
+0.49 cells, under 0.025 m at 0.05 m/cell, longer than the shortest path. For
+`a_star_clearance` and `a_star_comfort` the bound applies to the penalised
+cost, not to geometric length: those variants deliberately trade extra length
+for clearance, and no bound on length follows from the heuristic.
+`tests/test_planning.py` pins the bound. The heuristic is left unchanged
+because every published node count depends on it.
 
 **The smoothing budget.** The robust candidate searches at
 `r_plan_min = r_pref + spline_shrinkage_budget = 1.10 m`, above the 0.90 m the

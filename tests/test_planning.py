@@ -96,7 +96,8 @@ def test_goal_region_heuristic_overestimate_is_bounded(radius):
 
 def test_goal_region_suboptimality_stays_within_the_bound():
     """Consequence of the bounded overestimate: on an open grid the returned
-    path to a 6-cell goal disc is within the bound of the optimum."""
+    path to a 6-cell goal disc is within the bound of the optimum. Uses the
+    unpenalised a_star, where planning cost equals geometric octile length."""
     radius = 6
     bound = (math.sqrt(1.0 + OCTILE_DIAG ** 2) - 1.0) * radius
     clear = open_grid(60)

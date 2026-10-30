@@ -45,8 +45,12 @@ heuristic (octile to the disc centre minus the disc radius, see
 admissible: it can overestimate the cost to the nearest goal cell by at most
 ``(sqrt(1 + OCTILE_DIAG**2) - 1) * radius`` cells, about 0.082 x radius. For
 the 6-cell goal discs used here that bound is 0.49 cells and the largest
-observed overestimate is 0.24 cells, so the returned path can be longer than
-the optimum by at most the bound, 0.49 cells (under 0.025 m at 0.05 m/cell).
+observed overestimate is 0.24 cells. The guarantee is on planning cost: the
+returned path's ``g`` (cell units, penalty included) exceeds the optimal
+planning cost by at most the bound, 0.49 cells. Only in the unpenalised
+:func:`a_star` is planning cost the geometric octile length, so only there
+does it bound the extra length (under 0.025 m at 0.05 m/cell). In the
+penalised variants it bounds the penalised cost, not geometric length.
 ``tests/test_planning.py`` pins the bound. The heuristic is left as is because
 every published node count depends on it.
 """
