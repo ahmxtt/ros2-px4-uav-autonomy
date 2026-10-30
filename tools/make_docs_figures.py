@@ -70,7 +70,7 @@ BLUE = "#2F4FC9"
 ORANGE = "#C0501F"
 LIMIT = "#B91C1C"     # hard limit (r_eff, a_lat_max)
 PREF = "#B45309"      # soft target (r_pref)
-MAP_CMAP = LinearSegmentedColormap.from_list("prior_map", ["#4B5563", "#FFFFFF"])
+MAP_CMAP = LinearSegmentedColormap.from_list("prior_map", ["#242A33", "#FFFFFF"])
 FIGSIZE = (13.5, 6.0)   # both figures share it, so they line up in the README
 
 plt.rcParams.update({
@@ -86,8 +86,9 @@ plt.rcParams.update({
 def _prior_map(ax, image, extent) -> None:
     ax.imshow(image, cmap=MAP_CMAP, vmin=0, vmax=255, origin="upper",
               extent=extent, interpolation="nearest")
-    for side in ("top", "right"):
-        ax.spines[side].set_visible(True)
+    for spine in ax.spines.values():
+        spine.set_visible(True)
+        spine.set_edgecolor("#4B5563")
     ax.set_aspect("equal")
     ax.set_xlabel("x [m], world ENU")
     ax.set_ylabel("y [m], world ENU")
