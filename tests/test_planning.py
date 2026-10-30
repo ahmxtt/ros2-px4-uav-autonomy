@@ -70,6 +70,50 @@ def test_octile_heuristic_subtracts_the_goal_radius():
     assert octile_heuristic_cells((0, 8), (0, 10), 4) == 0.0
 
 
+def _disc_cells(radius):
+    return [(dr, dc) for dr in range(-radius, radius + 1)
+            for dc in range(-radius, radius + 1) if dr * dr + dc * dc <= radius * radius]
+
+
+@pytest.mark.parametrize("radius", [6, 13])
+def test_goal_region_heuristic_overestimate_is_bounded(radius):
+    """With a goal disc the heuristic is octile-to-centre minus the radius.
+    That is *not* exactly admissible: a goal cell inside the Euclidean disc can
+    sit up to sqrt(1 + OCTILE_DIAG**2) * radius from the centre in octile
+    distance. This pins the documented bound rather than the stronger claim.
+    6 cells is the goal radius used throughout (0.30 m at 0.05 m/cell)."""
+    bound = (math.sqrt(1.0 + OCTILE_DIAG ** 2) - 1.0) * radius
+    goal = _disc_cells(radius)
+    worst = 0.0
+    for r in range(-30, 31):
+        for c in range(-30, 31):
+            true_cost = min(OCTILE_DIAG * min(abs(r - g[0]), abs(c - g[1]))
+                            + max(abs(r - g[0]), abs(c - g[1])) for g in goal)
+            worst = max(worst, octile_heuristic_cells((r, c), (0, 0), radius) - true_cost)
+    assert worst <= bound + 1e-9
+    assert worst > 0.0, "if this ever fails the heuristic became exactly admissible"
+
+
+def test_goal_region_suboptimality_stays_within_the_bound():
+    """Consequence of the bounded overestimate: on an open grid the returned
+    path to a 6-cell goal disc is within the bound of the optimum."""
+    radius = 6
+    bound = (math.sqrt(1.0 + OCTILE_DIAG ** 2) - 1.0) * radius
+    clear = open_grid(60)
+    centre = (30, 30)
+    goal = frozenset((centre[0] + dr, centre[1] + dc) for dr, dc in _disc_cells(radius))
+    rng = np.random.default_rng(1)
+    for _ in range(40):
+        start = (int(rng.integers(0, 60)), int(rng.integers(0, 60)))
+        if start in goal:
+            continue
+        res = a_star(clear, start, goal, centre, radius)
+        assert res.success and res.path_cells[-1] in goal
+        optimum = min(OCTILE_DIAG * min(abs(start[0] - g[0]), abs(start[1] - g[1]))
+                      + max(abs(start[0] - g[0]), abs(start[1] - g[1])) for g in goal)
+        assert path_length_metres(res.path_cells, 1.0) <= optimum + bound + 1e-9
+
+
 # ---------------------------------------------------------- corner cutting
 
 def test_no_corner_cutting_through_a_diagonal_gap():

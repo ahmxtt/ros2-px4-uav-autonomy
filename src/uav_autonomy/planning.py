@@ -21,8 +21,9 @@ shape the preference among already-safe cells.
     B-spline is allowed to consume, so the refined trajectory can still meet
     ``r_pref`` after the spline cuts corners.
 
-The mission policy computes both the robust and the boundary candidate and
-selects between them; see ``docs/architecture.md``.
+The mission policy describes computing both the robust and the boundary
+candidate and selecting between them; that wrapper is not part of this release
+(see ``sim/config/mission_policy.yaml``). Each tool here runs one candidate.
 
 Invariants shared by all three:
 
@@ -35,9 +36,18 @@ Invariants shared by all three:
   trailing ``(row, col)`` makes the pop order total, so repeated runs on
   identical input produce byte-identical paths.
 
-Admissibility: the octile heuristic never exceeds the true remaining cost. In
-both penalised variants the penalty is non-negative, so every penalised edge
-costs at least its geometric length and the same heuristic stays admissible.
+Admissibility: the octile distance to a single cell never exceeds the true
+remaining cost, and in both penalised variants the penalty is non-negative, so
+every penalised edge costs at least its geometric length. The goal-*region*
+heuristic (octile to the disc centre minus the disc radius, see
+:func:`octile_heuristic_cells`) is consistent but only approximately
+admissible: it can overestimate the cost to the nearest goal cell by at most
+``(sqrt(1 + OCTILE_DIAG**2) - 1) * radius`` cells, about 0.082 x radius. For
+the 6-cell goal discs used here that bound is 0.49 cells and the largest
+observed overestimate is 0.24 cells, so the returned path can be longer than
+the optimum by at most that amount (under 0.025 m at 0.05 m/cell).
+``tests/test_planning.py`` pins the bound. The heuristic is left as is because
+every published node count depends on it.
 """
 
 from __future__ import annotations
@@ -128,9 +138,12 @@ def octile_heuristic_cells(
 ) -> float:
     """Octile distance from ``cell`` to the *boundary* of the goal disc.
 
-    Subtracting the goal radius keeps the heuristic admissible for the
-    multi-target goal-region search: the true cost to the nearest goal cell is
-    never below ``octile_to_centre - radius``.
+    Subtracting the goal radius approximates an admissible bound for the
+    multi-target goal-region search. It is not exact: a goal cell at Euclidean
+    distance ``<= radius`` from the centre can lie at octile distance up to
+    ``sqrt(1 + OCTILE_DIAG**2) * radius`` from it, so the heuristic can
+    overestimate by up to about ``0.082 * radius`` cells. See the module
+    docstring for the consequence, which is bounded and small.
     """
     dr = abs(cell[0] - goal_centre[0])
     dc = abs(cell[1] - goal_centre[1])
