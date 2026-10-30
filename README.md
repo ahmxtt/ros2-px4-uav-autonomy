@@ -103,13 +103,21 @@ classes.** They come from different runs and measure different things.
 | Handover continuity | position jump 0.245 m, yaw jump 11.07° | 2 (reproduced), 3 (flown) |
 | Stop–Replan–Resume run | online replan 0.251 s, the reported internal computation and validation time (`t_total_s`), excluding the preceding loading of inputs; recorded wall-clock span 0.322 s; budget 3 s. Rejoin distance 0.006 m, mission completed, no failsafe, max. tracking error 0.802 m | 3 |
 
-<p>
-  <img src="docs/figures/nominal_planning.png" alt="Nominal planning" width="49%">
-  <img src="docs/figures/srr_geometry.png" alt="Stop-Replan-Resume geometry" width="49%">
-</p>
+**Nominal plan (class 1).** A\* path and B-spline trajectory on the execution
+prior map, and the trajectory's clearance against the three planning radii.
+
+![Nominal planning](docs/figures/nominal_planning.png)
+
+**Stop–Replan–Resume detour (class 2).** The sensed obstacle, the local A\*
+detour and its refinement, and the refined detour's speed and lateral
+acceleration against the planner's limits.
+
+![Stop-Replan-Resume detour](docs/figures/srr_geometry.png)
 
 *Both figures are generated offline by `tools/make_docs_figures.py` from the
-published results. They show computed geometry, not flight recordings.*
+published code and results. The script checks the refined lengths, the minimum
+clearances and the detour's peak lateral acceleration and curvature against the
+published values. They show computed geometry, not flight recordings.*
 
 **Class 4, public runtime validation**
 ([`results/public_runtime_validation/`](results/public_runtime_validation/README.md)).

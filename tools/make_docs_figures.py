@@ -8,7 +8,8 @@ produced, so they are auditable rather than opaque:
 1. ``nominal_planning.png`` - the A* path and the refined trajectory on the
    execution prior map, with the clearance profile. Regenerated from the SDF.
 2. ``srr_geometry.png`` - the Stop-Replan-Resume detour, sensed obstacle and
-   rejoin, reproduced offline from the published result bundle.
+   rejoin, with the refined detour's speed and lateral acceleration,
+   reproduced offline from the published result bundle.
 
 Both are derived from the same computations the reproduction tools run, so a
 figure can never drift away from the published numbers without those tools
@@ -43,6 +44,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 from matplotlib.patches import Circle  # noqa: E402
 from PIL import Image  # noqa: E402
 
@@ -58,11 +60,45 @@ SRR = REPO_ROOT / "results" / "stop_replan_resume"
 CANOPY_M = {"Pine Tree": 1.5, "Oak tree": 4.0}
 SAVE = dict(dpi=140, bbox_inches="tight", metadata={"Software": None})
 
-INK = "#1b2430"
-MUTED = "#6b7785"
-ACCENT = "#c2410c"
-BLUE = "#1d4ed8"
-GREEN = "#15803d"
+# Same palette as docs/figures/architecture.drawio: green is the offline
+# result, blue the Stop-Replan-Resume result, grey an intermediate or a
+# reference, orange what the vehicle sensed.
+INK = "#1A1A1A"
+MUTED = "#6B7280"
+GREEN = "#2E7D32"
+BLUE = "#2F4FC9"
+ORANGE = "#C0501F"
+LIMIT = "#B91C1C"     # hard limit (r_eff, a_lat_max)
+PREF = "#B45309"      # soft target (r_pref)
+MAP_CMAP = LinearSegmentedColormap.from_list("prior_map", ["#4B5563", "#FFFFFF"])
+FIGSIZE = (13.5, 6.0)   # both figures share it, so they line up in the README
+
+plt.rcParams.update({
+    "font.size": 10.5, "axes.titlesize": 12.5, "axes.titleweight": "bold",
+    "axes.titlelocation": "left", "axes.titlepad": 10, "axes.labelsize": 10.5,
+    "axes.edgecolor": "#9CA3AF", "axes.labelcolor": INK, "text.color": INK,
+    "xtick.color": "#4B5563", "ytick.color": "#4B5563",
+    "legend.fontsize": 9.5, "legend.frameon": False,
+    "axes.spines.top": False, "axes.spines.right": False,
+})
+
+
+def _prior_map(ax, image, extent) -> None:
+    ax.imshow(image, cmap=MAP_CMAP, vmin=0, vmax=255, origin="upper",
+              extent=extent, interpolation="nearest")
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(True)
+    ax.set_aspect("equal")
+    ax.set_xlabel("x [m], world ENU")
+    ax.set_ylabel("y [m], world ENU")
+
+
+def _hline(ax, y, color, text, ls="--") -> None:
+    """Reference line labelled at its right end instead of in a legend."""
+    ax.axhline(y, ls=ls, lw=1.2, color=color, zorder=1)
+    ax.annotate(text, xy=(1.0, y), xycoords=("axes fraction", "data"),
+                xytext=(4, 0), textcoords="offset points", va="center",
+                fontsize=9.5, color=color)
 
 
 def build_execution_prior():
@@ -128,46 +164,40 @@ def figure_nominal(path: Path) -> None:
                               sp=T.SpeedParams(1.5, 0.3, 1.0, 1.0))
     tr = sel.selected
 
-    fig = plt.figure(figsize=(13.5, 6.6))
-    gs = fig.add_gridspec(1, 2, width_ratios=[1.15, 1.0], wspace=0.22)
+    fig = plt.figure(figsize=FIGSIZE)
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.0, 1.25], wspace=0.28)
 
     ax = fig.add_subplot(gs[0, 0])
     ox, oy = float(origin[0]), float(origin[1])
-    x1 = ox + geom.width_cells * res
-    y1 = oy + geom.height_cells * res
-    ax.imshow(image, cmap="gray", origin="upper",
-              extent=[ox, x1, oy, y1], interpolation="nearest")
-    ax.plot(xy[:, 0], xy[:, 1], lw=1.6, color=BLUE,
-            label=f"A* path — {P.path_length_metres(a.path_cells, res):.3f} m")
-    ax.plot(tr.samples_xy[:, 0], tr.samples_xy[:, 1], lw=1.8, color=ACCENT,
-            label=f"B-spline — {tr.trajectory_length_m:.3f} m")
-    ax.plot(*start_xy, "o", ms=10, color="#0891b2", mec="k", label="start")
-    ax.plot(*goal_xy, "*", ms=17, color="#facc15", mec="k", label="goal")
-    pad = 12
+    _prior_map(ax, image, [ox, ox + geom.width_cells * res, oy, oy + geom.height_cells * res])
+    ax.plot(xy[:, 0], xy[:, 1], lw=1.2, ls="--", color=MUTED,
+            label=f"A* path, {P.path_length_metres(a.path_cells, res):.3f} m")
+    ax.plot(tr.samples_xy[:, 0], tr.samples_xy[:, 1], lw=2.4, color=GREEN,
+            label=f"B-spline trajectory, {tr.trajectory_length_m:.3f} m")
+    ax.plot(*start_xy, "o", ms=9, color="white", mec=INK, mew=1.6, label="start")
+    ax.plot(*goal_xy, "*", ms=16, color="#FACC15", mec=INK, label="goal")
+    pad = 6
     ax.set_xlim(min(xy[:, 0].min(), start_xy[0]) - pad, max(xy[:, 0].max(), goal_xy[0]) + pad)
     ax.set_ylim(min(xy[:, 1].min(), start_xy[1]) - pad, max(xy[:, 1].max(), goal_xy[1]) + pad)
-    ax.set_aspect("equal")
-    ax.set_xlabel("x [m] — world ENU")
-    ax.set_ylabel("y [m] — world ENU")
-    ax.set_title("Nominal planning on the execution prior map (2 m reference altitude)",
-                 fontsize=11)
-    ax.legend(loc="upper left", fontsize=8.5, framealpha=0.92)
+    ax.set_title("Nominal plan on the execution prior map")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.13), ncol=2)
 
     ax2 = fig.add_subplot(gs[0, 1])
-    ax2.plot(tr.s, tr.clearance, lw=1.2, color=BLUE, label="clearance along the trajectory")
-    for val, col, lab in ((r_plan_min, GREEN, f"$r_{{plan\\,min}}$ = {r_plan_min:.2f} m"),
-                          (r_pref, "#ca8a04", f"$r_{{pref}}$ = {r_pref:.2f} m"),
-                          (r_eff, ACCENT, f"$r_{{eff}}$ = {r_eff:.2f} m")):
-        ax2.axhline(val, ls="--", lw=1.1, color=col, label=lab)
-    ax2.plot(tr.s[np.argmin(tr.clearance)], tr.clearance.min(), "v", ms=9,
-             color=ACCENT, mec="k",
-             label=f"minimum {tr.clearance_min_m:.3f} m")
-    ax2.set_xlabel("arc length s [m]")
-    ax2.set_ylabel("clearance to raw obstacles [m]")
+    ax2.plot(tr.s, tr.clearance, lw=1.6, color=GREEN)
+    _hline(ax2, r_plan_min, MUTED, f"r_plan_min {r_plan_min:.2f} m")
+    _hline(ax2, r_pref, PREF, f"r_pref {r_pref:.2f} m")
+    _hline(ax2, r_eff, LIMIT, f"r_eff {r_eff:.2f} m")
+    i_min = int(np.argmin(tr.clearance))
+    ax2.plot(tr.s[i_min], tr.clearance[i_min], "v", ms=9, color=GREEN, mec=INK)
+    ax2.annotate(f"minimum {tr.clearance_min_m:.3f} m", xy=(tr.s[i_min], tr.clearance[i_min]),
+                 xytext=(-14, 26), textcoords="offset points", ha="right", fontsize=9.5,
+                 arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8))
+    ax2.set_xlim(0, float(tr.s[-1]))
     ax2.set_ylim(0, min(6.0, float(tr.clearance.max()) * 1.05))
-    ax2.set_title("Clearance of the refined trajectory", fontsize=11)
-    ax2.legend(loc="upper right", fontsize=8.5, framealpha=0.92)
-    ax2.grid(alpha=0.25)
+    ax2.set_xlabel("arc length s [m]")
+    ax2.set_ylabel("clearance to the nearest obstacle [m]")
+    ax2.set_title(f"Clearance along the trajectory: {tr.classification}")
+    ax2.grid(axis="y", alpha=0.25)
 
     fig.savefig(path, **SAVE)
     plt.close(fig)
@@ -212,38 +242,52 @@ def figure_srr(path: Path) -> None:
         lateral_half_width=roi.lateral_half_width_m,
         hover_xy=hover_xy, resume_xy=resume_xy, hover_idx=ih, resume_idx=ir)
 
-    fig, ax = plt.subplots(figsize=(9.6, 8.2))
-    ox, oy = float(meta["origin"][0]), float(meta["origin"][1])
-    x1 = ox + geom.width_cells * geom.resolution
-    y1 = oy + geom.height_cells * geom.resolution
-    ax.imshow(image, cmap="gray", origin="upper",
-              extent=[ox, x1, oy, y1], interpolation="nearest")
+    fig = plt.figure(figsize=FIGSIZE)
+    gs = fig.add_gridspec(2, 2, width_ratios=[1.0, 1.25], wspace=0.28, hspace=0.35)
 
-    ax.plot(xs, ys, lw=1.3, ls="--", color=MUTED, label="original mission reference")
-    ax.plot(cand.astar_xy[:, 0], cand.astar_xy[:, 1], lw=1.2, color=BLUE,
-            label=f"local A* detour — {cand.astar_path_length_m:.2f} m")
-    ax.plot(cand.smoothed_xy[:, 0], cand.smoothed_xy[:, 1], lw=2.1, color=ACCENT,
-            label=f"refined detour — {cand.smoothed_length_m:.2f} m, "
-                  f"clearance {cand.clearance_min_m:.3f} m")
-    ax.add_patch(Circle(obs_xy, obs_r, fc="#fb923c", ec="#c2410c", alpha=0.55,
-                        label=f"sensed obstacle (r = {obs_r:.2f} m)"))
+    ax = fig.add_subplot(gs[:, 0])
+    ox, oy = float(meta["origin"][0]), float(meta["origin"][1])
+    _prior_map(ax, image, [ox, ox + geom.width_cells * geom.resolution,
+                           oy, oy + geom.height_cells * geom.resolution])
+    ax.plot(xs, ys, lw=1.4, ls="--", color=GREEN, label="original mission reference")
+    ax.plot(cand.astar_xy[:, 0], cand.astar_xy[:, 1], lw=1.1, color=MUTED,
+            label=f"local A* detour, {cand.astar_path_length_m:.2f} m")
+    ax.plot(cand.smoothed_xy[:, 0], cand.smoothed_xy[:, 1], lw=2.4, color=BLUE,
+            label=f"refined detour, {cand.smoothed_length_m:.2f} m")
+    ax.add_patch(Circle(obs_xy, obs_r, fc="#FDBA74", ec=ORANGE, lw=1.4, alpha=0.75,
+                        label=f"sensed obstacle, r = {obs_r:.2f} m"))
     ax.add_patch(Circle(tuple(gt["centroid_world_xy"]), float(gt["radius_m"]),
                         fc="none", ec=INK, ls=":", lw=1.5,
-                        label=f"ground truth (evaluation only, r = {gt['radius_m']:.1f} m)"))
-    ax.plot(*hover_xy, "o", ms=11, color="#0891b2", mec="k", label="stop / hover")
-    ax.plot(*resume_xy, "*", ms=18, color="#facc15", mec="k", label="resume anchor")
-
-    pad = 13
+                        label=f"ground truth (eval. only), r = {gt['radius_m']:.1f} m"))
+    ax.plot(*hover_xy, "o", ms=9, color="white", mec=INK, mew=1.6, label="stop / hover")
+    ax.plot(*resume_xy, "*", ms=16, color="#FACC15", mec=INK, label="resume anchor")
+    pad = 6
     allx = np.concatenate([cand.smoothed_xy[:, 0], [obs_xy[0], hover_xy[0], resume_xy[0]]])
     ally = np.concatenate([cand.smoothed_xy[:, 1], [obs_xy[1], hover_xy[1], resume_xy[1]]])
     ax.set_xlim(allx.min() - pad, allx.max() + pad)
     ax.set_ylim(ally.min() - pad, ally.max() + pad)
-    ax.set_aspect("equal")
-    ax.set_xlabel("x [m] — world ENU")
-    ax.set_ylabel("y [m] — world ENU")
-    ax.set_title("Stop–Replan–Resume: sensed obstacle, local detour and rejoin\n"
-                 "(geometry reproduced offline from the published run)", fontsize=11)
-    ax.legend(loc="upper left", fontsize=8.4, framealpha=0.93)
+    ax.set_title("Stop–Replan–Resume detour")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.13), ncol=2)
+
+    s_d = cand.smoothed_s - cand.smoothed_s[0]
+    sp = R.SPEED_PARAMS
+    axv = fig.add_subplot(gs[0, 1])
+    axv.plot(s_d, cand.smoothed_v, lw=1.6, color=BLUE)
+    _hline(axv, sp.v_nominal, MUTED, f"v_nominal {sp.v_nominal:.1f} m/s")
+    axv.set_ylim(0, sp.v_nominal * 1.25)
+    axv.set_xlim(0, float(s_d[-1]))
+    axv.set_ylabel("speed [m/s]")
+    axv.set_title(f"Refined detour profile: {cand.classification}, "
+                  f"clearance {cand.clearance_min_m:.3f} m")
+    axv.grid(axis="y", alpha=0.25)
+    axa = fig.add_subplot(gs[1, 1], sharex=axv)
+    axa.plot(s_d, np.abs(cand.smoothed_lat_accel), lw=1.6, color=BLUE)
+    _hline(axa, sp.a_lat_max, LIMIT, f"a_lat_max {sp.a_lat_max:.1f} m/s²")
+    axa.set_ylim(0, sp.a_lat_max * 1.35)
+    axa.set_xlabel("arc length along the detour [m]")
+    axa.set_ylabel("|lateral acceleration| [m/s²]")
+    axa.grid(axis="y", alpha=0.25)
+
     fig.savefig(path, **SAVE)
     plt.close(fig)
     return cand
@@ -272,6 +316,8 @@ def main() -> int:
         ("nominal clearance min [m]", tr.clearance_min_m, pub_t["clearance_min_m"]),
         ("SRR detour length [m]", c.smoothed_length_m, pub_s["smoothed_length_m"]),
         ("SRR clearance min [m]", c.clearance_min_m, pub_s["clearance_min_m"]),
+        ("SRR max lateral accel [m/s^2]", c.max_lateral_accel_mps2, pub_s["max_lateral_accel_mps2"]),
+        ("SRR max curvature [1/m]", c.max_curvature_1_per_m, pub_s["max_curvature_1_per_m"]),
     ):
         ok = abs(float(mine) - float(ref)) <= 1e-6
         print(f"  {'OK  ' if ok else 'FAIL'} {label:32s} {float(mine):.6f} vs {float(ref):.6f}")
