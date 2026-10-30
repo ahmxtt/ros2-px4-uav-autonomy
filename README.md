@@ -2,267 +2,219 @@
 
 [![CI](https://github.com/ahmxtt/ros2-px4-uav-autonomy/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmxtt/ros2-px4-uav-autonomy/actions/workflows/ci.yml)
 
-**Planning, PX4 Offboard execution and Stop–Replan–Resume validation**
+**Global planning, trajectory refinement, PX4 Offboard execution and
+Stop–Replan–Resume obstacle response for a multirotor in cluttered forest
+terrain. ROS 2 Jazzy · PX4 · Gazebo Harmonic · Python.**
 
-A modular sense–plan–act autonomy stack for a multirotor UAV in cluttered
-forest terrain, built on ROS 2 Jazzy, PX4 and Gazebo Harmonic.
+> Master's thesis work, released as a curated implementation and evidence
+> bundle rather than the full development history. Validated **offline and in
+> PX4 SITL / Gazebo only**. There is no real-flight validation.
 
-The system plans a collision-free reference through a prior occupancy map,
-refines it into a curvature-continuous trajectory, executes it through PX4
-Offboard at 20 Hz, and reacts to an obstacle absent from the map by stopping,
-replanning locally, and rejoining the original mission.
-
-> Master's thesis work on UAV autonomy for search-and-rescue, disaster response
-> and wildlife monitoring. This repository is the curated implementation and
-> evidence release, not the full development history.
-
-![Architecture](docs/figures/architecture.png)
-
----
-
-## Two classes of result — read this first
+## At a glance
 
 | | |
 |---|---|
-| **Offline, deterministic** | Map generation, global planning, path reduction, B-spline refinement, feasibility evaluation. Computed from the Gazebo world file. The occupancy grid and the A\* cell path reproduce **exactly** in the verified environment. Refined trajectory geometry and derived floating-point metrics reproduce within the documented numerical tolerances. |
-| **Controlled PX4 SITL / Gazebo runs** | Nominal mission tracking, ground-truth versus PX4 state consistency, online Stop–Replan–Resume behaviour. Measurements of specific flights. Live SITL is not deterministic and is not claimed to be. Not regenerable. |
+| **Problem** | Fly a pre-planned multi-POI mission (two legs out, a two-turn orbit at each point of interest, one leg back) through a forest at 2 m altitude, as in search-and-rescue or wildlife-monitoring use. When an obstacle that is not in the prior map appears in front of the vehicle, stop, plan a local detour and rejoin the original mission, without handing control back to a pilot. |
+| **What I built** | A ROS-free Python core (map rasterisation, deterministic A\*, clearance-validated B-spline refinement, local ROI replanning, ENU↔NED frames, provenance artifacts) and two ROS 2 nodes on top of it: a PX4 Offboard mission executor with a two-flag arm gate and telemetry watchdogs, and a Stop–Replan–Resume node with 2D-LiDAR cluster detection. |
+| **What I integrated** | PX4 SITL with its **EKF2 estimator, used as supplied**, the X500 SITL airframe, uXRCE-DDS, Gazebo Harmonic. No custom SLAM or sensor fusion. |
+| **Reproducible from this repo** | The offline planning chain and the Stop–Replan–Resume detour geometry, checked against the published numbers in CI. |
+| **Measured in SITL** | Nominal mission tracking, ground truth vs. PX4 estimate, one complete perception-driven Stop–Replan–Resume run. These are **single controlled runs recorded with the private development tree** and cannot be regenerated. |
+| **Public runtime status** | The released code arms, enters Offboard and holds position in SITL, then aborts on a stale-telemetry watchdog **before** the mission phase. No armed run of this public code has completed a mission. |
 
-Nothing here is a real-flight result.
+![Architecture](docs/figures/architecture.png)
 
-## What this repository contributes
+*Green: offline core in `src/uav_autonomy/`. Orange: ROS 2 runtime in
+`ros2/nodes/`. Blue: obstacle-response path. The B-spline is fitted to the A\*
+path; line-of-sight reduction is a diagnostic side branch. The multi-POI
+mission reference is published as a fixed input; the stitcher that produced
+it is not part of this release.*
 
-An **integration and validation** contribution with explicit, checkable
-contracts — not a new estimation or SLAM method.
+## Technical contributions
 
-- **Deterministic 2D grid planning.** 8-connected, octile heuristic, no corner
-  cutting, hard binary inflation, total tie-break on `(f, g, row, col)`.
-  `tests/test_regression_published_result.py` asserts the A\* result cell for
-  cell against `results/planning/path.csv`, and rebuilds the rasterised grid
-  byte-identically inside the same test. The quickstart tool compares five
-  scalars, not cells.
-- **A smoothing budget, followed by validation.** The planner searches above
-  the clearance the finished trajectory should hold. That is a budget, not a
-  guarantee: every refined candidate is validated on dense samples and
-  classified by its clearance. The nominal trajectory reached
-  `robust_smoothed`; the local detour reached only `boundary_smoothed`.
-- **Local ROI replanning** over a motion-envelope-sized neighbourhood,
-  computed online in 0.25 s during the controlled SITL mission, rejoining the
+- **Deterministic 2D grid planning.** 8-connected A\* with an octile
+  heuristic, no corner cutting, hard binary inflation and a total tie-break
+  on `(f, g, row, col)`, so the published path regenerates cell for cell.
+  Three edge-cost variants: geometric, clearance-penalised (local replan) and
+  comfort-penalised (nominal mission).
+- **A smoothing budget, followed by validation.** The nominal planner
+  inflates to `r_plan_min` = 1.10 m, above the `r_pref` = 0.90 m the
+  finished trajectory should hold, because a B-spline cuts corners. That
+  budget is not a guarantee. Every candidate is validated on dense samples
+  against the raw obstacles and classified by the clearance it actually
+  reached: the nominal trajectory reached `robust_smoothed`, the local detour
+  only `boundary_smoothed`.
+- **Local ROI replanning.** The region of interest is derived from the motion
+  envelope (turn radius, stopping distance, replan budget, obstacle size). The
+  sensed obstacle is stamped into a crop of the prior map. The detour is
+  planned from the hover pose to a downstream resume anchor and rejoins the
   untouched original reference.
-- **Reproducibility as infrastructure.** Every stage emits a manifest, metrics
-  and SHA-256 hashes; both offline chains rerun in CI.
-
-## Incremental validation-gate framework
-
-Each gate defines a capability, the evidence that would demonstrate it, and its
-failure conditions; a gate had to close before the next opened. A gate is a
-**scope boundary**: a claim carries the scope of the gate that produced it.
-
-| Gate | Scope |
-|---|---|
-| **Gate 4** | Coordinate transforms, communication and basic PX4 Offboard execution |
-| **Gate 5** | Nominal mission preparation and execution |
-| **Gate 6** | Obstacle response and Stop–Replan–Resume validation |
-
-Gates 0–3 and the Gate 6D-A / 6D-B split:
-[docs/validation_gates.md](docs/validation_gates.md).
-
-*Stop–Replan–Resume* (SRR) is this project's name for the obstacle-response
-sequence: stop, plan a local detour, resume the original mission.
-
-## X650 geometry, X500 dynamics
-
-The planning geometry is sized toward the Holybro X650 target platform. Mass,
-inertia, propulsion, motor layout, closed-loop dynamics and the LiDAR mount
-offset remain those of the PX4 X500 SITL model. The reported execution results
-are therefore **X650-geometry-informed SITL results**, not an autonomous
-real-flight validation of the X650.
-
-`r_eff` = 0.65 m is the only radius any code reads. It is a **planning
-envelope, not an airframe dimension**, built from the vendor's published
-650 mm wheelbase and 15 inch propellers:
-
-| Quantity | Value | Where it comes from |
-|---|---|---|
-| Frame radius, motor hub to centre | 0.3250 m | vendor figure, 0.650 / 2 |
-| Propeller radius | 0.1905 m | vendor figure, 15 × 0.0254 / 2 |
-| Propeller-tip envelope radius | 0.5155 m | sum of the two above |
-| Safety margin | 0.1345 m | chosen, not derived |
-| **`r_eff` = `robot_radius` = 0.6500 m** | the planning envelope | `sim/config/robot_map2_safe.yaml`; read by every planning tool and by the regression test |
-| Footprint `±0.46 m` | assumed | **No measurement backs it.** Not an arm-tip half-extent. Documentation only: no code reads the footprint polygon. |
-| `r_pref` 0.90 m, `r_plan_min` 1.10 m, `r_comfort` 1.20 m | clearance policy | thresholds, not geometry |
-
-An earlier nominal radius of 0.50 m was rejected for public planning because
-it does not enclose the 0.5155 m propeller-tip envelope. All published planning
-results use `r_eff` = 0.65 m from `sim/config/robot_map2_safe.yaml`; the 0.50 m
-value is not shipped as a configuration. The conservative bound for a ±0.46 m
-square is its circumscribed circle, 0.650538 m, not its inscribed circle.
-
-Tracking, stopping, hover transitions and the rejoin transient are
-**dynamics-dependent** and carry the X500 model's dynamics. Full provenance:
-[docs/results.md](docs/results.md#x650-geometry-x500-dynamics).
+- **Perception kept falsifiable.** In the perception-driven variant
+  (Gate 6D-B), ground truth is held in an evaluation-only namespace and gates
+  no decision.
+- **Reproducibility as infrastructure.** Every stage writes a manifest,
+  metrics and SHA-256 hashes. An incremental
+  [validation-gate framework](docs/validation_gates.md) bounds the scope of
+  each claim.
 
 ## Quickstart (offline — no ROS, PX4 or Gazebo)
 
 ```bash
+git clone https://github.com/ahmxtt/ros2-px4-uav-autonomy.git
+cd ros2-px4-uav-autonomy
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
+pip install -e ".[test]"
+
+pytest                                                        # 155 tests
 python3 tools/reproduce_offline_demo.py --output-dir /tmp/uav_demo
 python3 tools/reproduce_srr_geometry.py --output-dir /tmp/uav_srr
+for d in results/*/; do (cd "$d" && sha256sum -c hashes.txt); done
 ```
 
-Under a minute each. Run them from the repository root; internally the tools
-resolve repository inputs independently of the caller's current working
-directory, and CI additionally invokes them by absolute path from a foreign
-working directory. The first reproduces the
-nominal planning and trajectory chain, the second the Stop–Replan–Resume detour
-geometry. Both rebuild the map from the world file, rerun the canonical
-computation and **compare their output against the published numbers**, exiting
-non-zero on a regression.
+Both reproduction tools rebuild the occupancy grid from the Gazebo world file,
+rerun the canonical computation, compare against the published numbers and
+exit non-zero on a regression. Each one ends in `RESULT : PASS`. On a laptop
+the full test suite takes about a minute and the nominal demo about 20 s. On
+macOS, use `shasum -a 256 -c` in place of `sha256sum -c`.
 
-The SITL path is in [docs/installation.md](docs/installation.md).
+To run the SITL stack, see [docs/installation.md](docs/installation.md).
 
 ## Selected results
 
-The groups measure **different things** and must not be combined. Each is
-labelled with its result class: **1** offline nominal planning, **2** offline
-SRR geometry, **3** canonical controlled SITL evidence (single runs, not
-regenerable), **4** public-release runtime validation.
+Every number carries its evidence class. **Do not combine numbers across
+classes.** They come from different runs and measure different things.
 
-**1 · Nominal planning** *(class 1, offline)* — single leg on the execution
-prior map
+| Class | Meaning | Reproducible from this repository |
+|---|---|---|
+| **1** | Offline nominal planning | yes: A\* cell path and counters exact, trajectory metrics to 1e-9 |
+| **2** | Offline Stop–Replan–Resume geometry | yes: A\* exact, refined detour to 1e-6 m |
+| **3** | Canonical controlled SITL evidence (thesis) | no: single runs, private development tree, raw logs not published |
+| **4** | Public-release runtime validation | records an **incomplete** run, see below |
 
-| | |
-|---|---|
-| A\* path length | 102.139 m (straight line 97.541 m, ratio 1.047) |
-| Nodes expanded | 230 047 |
-| Minimum clearance to raw obstacles | 1.200 m |
+| Result | Value | Class |
+|---|---|---|
+| A\* path, single leg | 102.139 m (straight line 97.541 m), 230 047 nodes expanded, min. clearance 1.200 m | 1 |
+| B-spline trajectory | 100.557 m, min. clearance 1.082 m → `robust_smoothed`, max. deviation from A\* 0.252 m | 1 |
+| Nominal tracking, setpoint vs. PX4 estimate, n = 2922 | horizontal mean / RMSE 0.220 / 0.234 m, p95 / max 0.378 / 0.609 m, 1.0 m budget not breached | 3 |
+| Ground truth vs. PX4 estimate, airborne, n = 14 869 | horizontal RMSE 0.226 m; consistency check of the integration, **not** an estimator benchmark | 3 |
+| Local detour geometry | 23.178 m, min. clearance 0.808 m → `boundary_smoothed` (≥ `r_eff` 0.65 m, **below** `r_pref` 0.90 m) | 2 |
+| Handover continuity | position jump 0.245 m, yaw jump 11.07° | 2 (reproduced), 3 (flown) |
+| Stop–Replan–Resume run | online replan 0.251 s (budget 3 s), rejoin distance 0.006 m, mission completed, no failsafe, max. tracking error 0.802 m | 3 |
 
-**2 · Trajectory refinement** *(class 1, offline)*
+<p>
+  <img src="docs/figures/nominal_planning.png" alt="Nominal planning" width="49%">
+  <img src="docs/figures/srr_geometry.png" alt="Stop-Replan-Resume geometry" width="49%">
+</p>
 
-| | |
-|---|---|
-| Length | 100.557 m (−1.549 % vs A\*) |
-| Minimum clearance | 1.082 m → `robust_smoothed` (≥ `r_pref` 0.90 m) |
-| Max deviation from A\* | 0.252 m |
+*Both figures are generated offline by `tools/make_docs_figures.py` from the
+published results. They show computed geometry, not flight recordings.*
 
-![Nominal planning](docs/figures/nominal_planning.png)
+**Class 4, public runtime validation**
+([`results/public_runtime_validation/`](results/public_runtime_validation/README.md)).
+The physical obstacle spawn into Gazebo is **verified**: the world went from
+88 to 89 models, the model occurs exactly once, and the pose read back equals
+the requested (−21.330, −43.710, 1.500) m. The armed perception-driven run is
+**not completed**. It armed, entered Offboard and held the settle setpoint
+(lateral error ≤ 0.060 m), then aborted on `lpos_stale` and landed cleanly. On
+that machine uXRCE-DDS delivered `vehicle_local_position` with gaps up to
+1.24 s against the 0.5 s watchdog. The run never reached `MISSION`, so no
+detection, stop, replan, resume or rejoin was exercised. The watchdog
+thresholds were not relaxed.
 
-**3 · Nominal mission tracking** *(class 3)* — setpoint vs PX4 estimate,
-MISSION phase, n = 2922
+Full tables, metric definitions and provenance are in
+[docs/results.md](docs/results.md).
 
-| | |
-|---|---|
-| Horizontal error, mean / RMSE | 0.220 m / 0.234 m |
-| Horizontal error, p95 / max | 0.378 m / 0.609 m |
-| Budget | 1.0 m, no window breach |
+## Planning geometry: X650 geometry, X500 dynamics
 
-**4 · Ground truth vs PX4 estimate** *(class 3)* — airborne, n = 14 869
+Planning geometry is sized toward the Holybro X650. The only radius any code
+reads is `r_eff` = 0.65 m (`sim/config/robot_map2_safe.yaml`). It is the
+0.5155 m propeller-tip envelope (650 mm wheelbase, 15 inch propellers) plus a
+chosen 0.1345 m margin: a planning envelope, not a measured airframe
+dimension. Mass, inertia, propulsion and closed-loop dynamics are those of
+the PX4 **X500** SITL model. Execution results are therefore
+X650-geometry-informed SITL results. For the full derivation and the rejected
+0.50 m radius, see
+[docs/results.md](docs/results.md#x650-geometry-x500-dynamics).
 
-| | |
-|---|---|
-| Horizontal RMSE | 0.226 m |
-| Mean offset (dx, dy, dz) | 0.060 / 0.123 / 0.019 m |
+## Tests and CI
 
-**5 · Stop–Replan–Resume** *(class 3 for the run, class 2 for the geometry)*
+[GitHub Actions](.github/workflows/ci.yml) runs on Python 3.10 and 3.12:
 
-| | |
-|---|---|
-| Local replan runtime | 0.251 s online during the controlled SITL mission (budget 3 s) |
-| Replanned path length | 23.178 m |
-| Minimum clearance | 0.808 m → `boundary_smoothed` (≥ `r_eff` 0.65 m, **below** `r_pref` 0.90 m) |
-| Position jump at handover / yaw jump | 0.245 m / 11.07° |
-| Rejoin distance to original reference | 0.006 m |
-| Mission | completed, no failsafe, tracking max 0.802 m |
+- the `pytest` suite: planner invariants, frame transforms, geometry
+  semantics, cell-for-cell regression against the published path, and SRR
+  replanning;
+- both offline reproduction tools, invoked from a foreign working directory;
+- byte-exact regeneration of the canonical PX4 setpoint stream (SHA-256
+  `bcc70fb8…`);
+- assembly of the SRR runtime inputs, and hash verification of every result
+  bundle.
 
-![Stop-Replan-Resume geometry](docs/figures/srr_geometry.png)
-
-Groups 3 to 5 come from the canonical runs in `results/nominal_mission/` and
-`results/stop_replan_resume/`, produced by the private development tree.
-
-**Class 4**, [`results/public_runtime_validation/`](results/public_runtime_validation/),
-records what happened when *this* repository drove a live PX4 SITL stack. The
-physical obstacle spawn is **verified**: models 88 → 89, exactly one
-occurrence, measured pose equal to the requested (−21.330, −43.710, 1.500) m.
-The armed Stop–Replan–Resume run is **not completed**: it armed, entered
-Offboard, held the settle setpoint, then aborted on stale local-position
-telemetry and landed cleanly. It never reached MISSION, so no detection, stop,
-replan, resume or rejoin was exercised. There is no public armed nominal run
-either.
-
-Full tables, definitions and provenance: [docs/results.md](docs/results.md).
-
-## Repository structure
-
-| Path | Contents |
-|---|---|
-| `src/uav_autonomy/` | Algorithmic core: mapping, grid, planning, smoothing, trajectory, replanning, frames, artifacts. No ROS. |
-| `tools/` | Thin CLIs over the core: the two reproduction tools, map/plan/refine, `build_ned_setpoints.py`, the figure generator. Plus the SITL helpers `sitl_stack.sh` (`start`, `status`, `params`, `prearm`, `rtf`, `stop`), `spawn_srr_obstacle.py`, `gcs_heartbeat.py` and `build_srr_inputs.py`. |
-| `ros2/nodes/` | PX4 Offboard mission executor and the Stop–Replan–Resume node. Requires ROS 2. |
-| `ros2/rviz/`, `ros2/bridge/` | RViz config and the Gazebo↔ROS bridge template. |
-| `sim/` | Gazebo world, scenario definition, robot and mission-policy configuration. |
-| `sim/obstacles/` | The unknown obstacle: `srr_unknown_obstacle.sdf` (static cylinder, r = 1.5 m, h = 3.0 m, world (−21.33, −43.71)) and `obstacle.yaml`, its ground truth. Absent from the prior map by design. |
-| `results/mission_reference/` | The complete multi-POI mission reference: 16 157 samples, 5 segments, 428.651 m, 286.159 s. The input an armed run consumes. |
-| `results/` | Curated result bundles with metrics, manifests and hashes, including `public_runtime_validation/`. |
-| `tests/` | Invariant and regression tests (`pytest`). |
-| `docs/` | Architecture, validation gates, installation, reproducibility, results, data availability, limitations, safety. |
+**The ROS 2 nodes are only byte-compiled in CI.** No ROS, PX4 or Gazebo is
+installed there, so CI checks syntax, not runtime behaviour. Runtime checks
+were done by hand against a local SITL stack:
+[docs/reproducibility.md](docs/reproducibility.md#ros-2-runtime-verification).
 
 ## Limitations
 
 - Validated in **offline computation and PX4 SITL / Gazebo only**. No
   autonomous real-flight validation.
 - **No custom SLAM or sensor-fusion method.** State estimation is PX4's EKF2.
-- Global planning is **2D at a constant reference altitude** in the evaluated
-  mission.
-- Evidence is **single controlled runs**, not repeated trials under a fixed
-  protocol. **No statistical robustness claim**, and no success rate.
-- SRR was validated for **one** obstacle. Multi-obstacle handling and
-  false-positive policy are out of scope.
+- Global planning is **2D at a constant 2 m reference altitude**. Tree
+  canopies at that altitude are rasterised into the prior map; the planner
+  does not search in 3D.
+- Detection uses a single-plane 2D LiDAR. Stop–Replan–Resume was validated
+  for **one** static obstacle.
+- Evidence comes from **single controlled runs**, not repeated trials. No
+  success rate is reported and no statistical robustness is claimed.
+- **No armed run of the public code has completed a mission.** The completed
+  missions are class 3, recorded with the private development tree.
+- Known runtime defects in `ros2/nodes/` are documented, not fixed: a
+  single-shot Land command with a time-based force-disarm fallback, and a
+  replan that blocks the setpoint stream. See
+  [docs/limitations.md](docs/limitations.md#known-runtime-defects-documented-not-fixed).
 - **Not safety-certified.**
 
 Full list: [docs/limitations.md](docs/limitations.md) ·
 [docs/safety.md](docs/safety.md).
 
+## Repository structure
+
+| Path | Contents |
+|---|---|
+| `src/uav_autonomy/` | Algorithmic core: mapping, grid, planning, smoothing (LoS), trajectory, replanning, frames, artifacts. No ROS. |
+| `ros2/nodes/` | PX4 Offboard mission executor and the Stop–Replan–Resume node. Requires ROS 2 and `px4_msgs`. |
+| `tools/` | Thin CLIs over the core, the two reproduction tools, `build_ned_setpoints.py`, the figure generator. SITL helpers: `sitl_stack.sh`, `spawn_srr_obstacle.py`, `gcs_heartbeat.py`, `build_srr_inputs.py`. |
+| `sim/` | Gazebo world, the unknown-obstacle model (absent from the prior map by design), robot and mission-policy configuration. |
+| `results/` | Curated result bundles with metrics, manifests and SHA-256 hashes, including the complete mission reference and `public_runtime_validation/`. |
+| `tests/` | Invariant and regression tests. |
+| `docs/` | See below. |
+
+## Documentation
+
+| Document | Read it for |
+|---|---|
+| [architecture.md](docs/architecture.md) | Module responsibilities, the ROS runtime state machines, frame conventions |
+| [results.md](docs/results.md) | Every published number, its definition and its result class |
+| [reproducibility.md](docs/reproducibility.md) | What regenerates exactly, what regenerates to tolerance, and what cannot regenerate |
+| [data_availability.md](docs/data_availability.md) | Contents of each bundle, and what the hashes do and do not prove |
+| [validation_gates.md](docs/validation_gates.md) | The gate framework and the scope of each claim |
+| [limitations.md](docs/limitations.md) · [safety.md](docs/safety.md) | Scope, known defects, the arm gate and watchdogs |
+| [installation.md](docs/installation.md) | Offline setup and the full SITL stack |
+
 ## Data availability
 
-This is a curated research-software release with fully reproducible offline
-planning and SRR-geometry results, together with selected result summaries and
-evidence artifacts from controlled PX4 SITL runs.
+The offline results are independently reproducible. The canonical SITL
+summaries are curated evidence: the raw per-tick logs behind them stay in the
+private research archive (available on reasonable request), so the hashes
+prove the integrity of the published files, not that they were correctly
+derived from those logs. The complete multi-POI mission reference is
+published as a fixed input; it is not regenerated here. Details:
+[docs/data_availability.md](docs/data_availability.md).
 
-It also publishes the complete mission reference,
-`results/mission_reference/mission_reference.csv`, which is what makes an armed
-run possible: it begins 0.035 m from the vehicle spawn point, so the settle
-guard will accept it, and `tools/build_ned_setpoints.py` turns it into the
-canonical 5725-row, 20 Hz PX4 setpoint stream. It is a byte-identical copy of
-the canonical artifact and a derived mission product, not raw data; the
-multi-leg policy planner, orbit generator and mission stitcher that produced it
-are not part of this release, so it is a fixed input rather than a regenerable
-one.
+## Citation, third-party content, licence
 
-The offline computations are independently reproducible: the occupancy grid
-and the A\* cell path reproduce exactly, and the Stop–Replan–Resume detour
-geometry with them, within the documented tolerances. The canonical live-run
-summaries are not independently recomputable from this release, because the
-complete raw per-tick time series behind them are not included; they stay in
-the private research archive, available on reasonable request, and what is
-published is curated evidence from those thesis runs. Published hashes prove
-the integrity of the published files, not reconstruction from absent raw logs.
-Separately, the public armed runtime did not complete an end-to-end mission,
-which is recorded in
-[results/public_runtime_validation/](results/public_runtime_validation/README.md).
-Full breakdown: [docs/data_availability.md](docs/data_availability.md).
-
-## Citation
-
-See [CITATION.cff](CITATION.cff), or GitHub's "Cite this repository" button.
-
-## Third-party dependencies
-
-ROS 2 Jazzy, PX4, Gazebo Harmonic, NumPy, SciPy, Matplotlib, Pillow, PyYAML.
-The Gazebo world references the Fuel models *Pine Tree* and *Oak tree*
-(OpenRobotics, **CC0 1.0**); their meshes are not included and must be fetched
-separately. Full attribution: [NOTICE.md](NOTICE.md).
-
-## Licence
-
-Code under [LICENSE](LICENSE) (Apache-2.0); data, figures and result bundles
-under [LICENSE-DATA](LICENSE-DATA) (CC BY 4.0).
+See [CITATION.cff](CITATION.cff), or use GitHub's "Cite this repository"
+button. The world references the Gazebo Fuel models *Pine Tree* and
+*Oak tree* (OpenRobotics, CC0 1.0); their meshes are not included. Full
+attribution is in [NOTICE.md](NOTICE.md). Code is licensed under
+[Apache-2.0](LICENSE); data, figures and result bundles under
+[CC BY 4.0](LICENSE-DATA).
